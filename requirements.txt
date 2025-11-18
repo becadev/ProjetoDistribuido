@@ -1,0 +1,16 @@
+# DJANGO REST (REST API)
+Django==5.0.3
+djangorestframework==3.15.1
+# Caso queira o painel administrativo mais bonito (opcional)
+django-cors-headers==4.3.1
+# API GATEWAY (FastAPI)
+fastapi==0.111.0
+uvicorn==0.29.0
+# CLIENTE SOAP EM PYTHON
+zeep==4.2.1
+# COMUNICAÇÃO HTTP
+requests==2.31.0
+# UTILIDADES
+python-dotenv==1.0.1
+pydantic==1.10.15
+lxml==4.9.3

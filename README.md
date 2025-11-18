@@ -1,157 +1,157 @@
-# ProjetoDistribuido
+# 🔷 AgendeJá - Sistema Distribuído (REST + SOAP + WebSocket + API Gateway)
+
+Este projeto implementa uma arquitetura distribuída contendo:
+
+- 🟦 **REST (Django)** → serviços, clientes, catálogo  
+- 🟧 **SOAP (Java JAX-WS)** → agendamentos  
+- 🟩 **WebSocket (FastAPI)** → notificações em tempo real  
+- 🟥 **API Gateway (FastAPI)** → unifica REST + SOAP + WS com HATEOAS  
+
+# 📌 1. Conceitos principais
+
+### ✔ REST
+REST é um estilo moderno de API baseado em HTTP e JSON.
+Utilizado aqui com Django REST Framework.
+
+### ✔ SOAP
+SOAP é um protocolo mais rígido baseado em XML + WSDL.
+Utilizado aqui com Java 21 + JAX-WS (lib externa, pois JAX-WS só vai até Java 8).
+
+### ✔ WebSocket
+Canal bidirecional para notificações em tempo real.
+
+### ✔ API Gateway
+Camada central que unifica tudo:
+
+- recebe requisições do cliente web  
+- chama REST (Django)  
+- chama SOAP (Java)  
+- expõe WebSocket  
+- retorna tudo em JSON  
+- implementa HATEOAS  
 
 
+                     ┌──────────────────┐
+                     │  Cliente Web     │
+                     │  (HTML/JS)       │
+                     └────────┬─────────┘
+                              │
+                              ▼
+                     ┌──────────────────┐
+                     │  API Gateway     │
+                     │   (FastAPI)      │
+                     │   c/ HATEOAS     │
+                     └────────┬─────────┘
+            REST             SOAP                        WEBSOCKET
+      ┌────────────────┐ ┌────────────────┐         ┌──────────────────┐
+      │ Django REST    │ │ Java SOAP      │         │    FastAPI WS    │
+      │ Serviços       │ │ Agendamentos   │ ◄────▶  |    Notificações │
+      └────────────────┘ └────────────────┘         └──────────────────┘
 
 
-``` scss
-                 ┌─────────────────────────────┐
-                 │         CLIENTE WEB         │
-                 │           (React)           │
-                 └─────────────┬───────────────┘
-                               │
-                     (Requisições HTTP JSON)
-                               │
-                   ┌───────────▼───────────┐
-                   │     API GATEWAY       │
-                   │      (FastAPI )       │
-                   │ Integra REST + SOAP   │
-                   │ Implementa HATEOAS    │
-                   └─────────┬─────────────┘
-           ┌─────────────────┼──────────────────────┐
-           │                                        │
-┌──────────▼───────────┐                   ┌────────▼───────────┐
-│     REST SERVICE     │                   │    SOAP SERVICE    │
-│ 	     (Node )       │                   │ 	   (Java)       │
-│ Catálogo, CRUD, etc. │                   │ Agendamento, Regras│
-└──────────────────────┘                   └────────────────────┘
-```
+# 📌 2. Como rodar o projeto
+py -3.11 -m venv venv
 
+venv\Scripts\activate
 
-# Regras e Implementação do Projeto
+pip install -r requirements.txt
 
-## Regras e Como o Projeto Cumpre
+## 🔵 2.1 API REST (Django)
 
-| Regra | Como seu projeto cumpre |
-|-------|--------------------------|
-| **API Gateway** | Centraliza o acesso dos serviços REST e SOAP (ex: `/gateway/modelos`, `/gateway/agendar`) |
-| **HATEOAS** | Gateway retorna links como `{ "_links": { "self": "/gateway/modelos/1", "agendar": "/gateway/agendar/1" } }` |
-| **2 APIs internas** | REST → modelos, preços e fotos; SOAP → agendamentos e disponibilidade |
-| **Servidor SOAP** | Implementado em Java (JAX-WS), com métodos de agendamento |
-| **Cliente Web** | React / HTML acessa o Gateway |
-| **Cliente externo** | Python (biblioteca *zeep*) testa o serviço SOAP |
-| **Documentação** | Swagger (Gateway) e SOAP-UI (SOAP Service) |
+cd agendeja_rest
 
----
+python manage.py migrate
 
-## Fluxo da Aplicação
+python manage.py runserver 5001
 
-1. O cliente abre o site e visualiza os modelos → **REST**.  
-2. O cliente escolhe modelo, data e hora → **Gateway chama SOAP**.  
-3. O SOAP valida disponibilidade e grava no banco.  
-4. O Gateway retorna resposta com **HATEOAS**:
+Endpoints:
 
-```json
-{
-  "mensagem": "Agendamento confirmado",
-  "_links": {
-    "self": "/gateway/agendamento/22",
-    "cancelar": "/gateway/agendamento/22/cancelar",
-    "modelos": "/gateway/modelos"
-  }
-}
-```
-
----
-
-# Justificativas Técnicas
-
-| Tipo | Responsável por | Justificativa |
-|------|-----------------|---------------|
-| **REST API** | CRUD simples e dados públicos | Mais leve e rápido para listagem e operações simples |
-| **SOAP API** | Regras complexas (agendamento, disponibilidade) | Protocolo estruturado com contrato (WSDL) |
-| **Gateway** | Unifica REST + SOAP + HATEOAS | Interface única para o cliente web |
-
----
-
-# Endpoints do Gateway
-
-| Endpoint | Ação | Internamente chama |
-|----------|------|--------------------|
-| **GET /gateway/catalogo** | Lista serviços | REST `/catalogo` |
-| **POST /gateway/servicos** | Cria serviço | REST `/servicos` |
-| **GET /gateway/disponibilidade?data=** | Lista horários | SOAP `consultarDisponibilidade` |
-| **POST /gateway/agendar** | Agenda serviço | SOAP `agendarServico` |
-| **DELETE /gateway/agendamento/{id}** | Cancela | SOAP `cancelarAgendamento` |
+- http://localhost:5001/servicos  
+- http://localhost:5001/clientes  
+- http://localhost:5001/admin  
 
 ---
 
-# Métodos SOAP
+## 🟧 2.2 Servidor SOAP (Java 21 com JAX-WS)
 
-| Método | Função | Entrada | Saída |
-|--------|--------|---------|--------|
-| **consultarDisponibilidade(data)** | Horários livres | Data | Lista de horários |
-| **agendarServico(cliente, servicoId, data, horaInicio)** | Agenda serviço | Cliente + serviço + data + hora | Confirmação / erro |
-| **cancelarAgendamento(id)** | Cancela agendamento | ID | Confirmação |
-| **listarAgendamentos(clienteId)** | Histórico do cliente | ID cliente | Lista de agendamentos |
+JAX-WS foi removido após o Java 8 → por isso incluí as dependências em `/lib`.
 
----
+### Compilar:
 
-# REST API (Serviços e Preços)
+cd soap/src
+javac -cp "../lib/*" com/agendeja/soap/*.java
 
-```
-GET /catalogo  
-GET /servicos/{id}  
-GET /modelos/categoria/{tipo}
-```
+### Rodar:
+
+java -cp "../lib/*;." com.agendeja.soap.Server
+
+### Acessar WSDL:
+
+http://localhost:8088/soap/agendamento?wsdl
 
 ---
 
-# SOAP API (Agendamentos)
+## 🔴 2.3 API Gateway (FastAPI)
 
-- consultarDisponibilidade(data)  
-- agendarServico(cliente, data, modelo)  
-- cancelarAgendamento(id)
+✔ Traduz SOAP → JSON  
+✔ Integra REST  
+✔ Exibe documentação Swagger  
+✔ Implementa HATEOAS
 
----
+### Rodar:
 
-# Modelo de Dados
+cd gateway
+uvicorn main:app --reload --port 8000
 
-## 1. Cliente
+### Swagger:
 
-| Campo | Tipo | Descrição |
-|-------|------|------------|
-| id | INT (PK) | Identificador |
-| nome | VARCHAR(100) | Nome completo |
-| telefone | VARCHAR(20) | Telefone / WhatsApp |
-| email | VARCHAR(100) | Opcional |
-| data_cadastro | DATETIME | Data de criação |
+http://localhost:8000/docs
+
 
 ---
 
-## 2. Serviço
+## 🟩 2.4 Cliente Web (Frontend)
 
-| Campo | Tipo | Descrição |
-|-------|------|------------|
-| id | INT (PK) | Identificador |
-| nome | VARCHAR(100) | Nome do serviço |
-| descricao | TEXT | Detalhes |
-| duracao_min | INT | Duração em minutos |
-| preco | DECIMAL(10,2) | Valor |
-| imagem_url | VARCHAR(255) | URL da imagem |
-| ativo | BOOLEAN | Disponível? |
+### Abra no navegador:
+
+frontend/index.html
 
 ---
 
-## 3. Agendamento
+# 📌 3. Endpoints do Gateway
 
-| Campo | Tipo | Descrição |
-|-------|------|------------|
-| id | INT (PK) | Identificador |
-| cliente_id | INT (FK) | Cliente |
-| servico_id | INT (FK) | Serviço |
-| data | DATE | Dia |
-| hora_inicio | TIME | Início |
-| hora_fim | TIME | Fim calculado |
-| status | ENUM('Confirmado','Cancelado','Concluído') | Estado |
-| observacoes | TEXT | Observações |
+| Tipo | Método | Endpoint | Função |
+|------|--------|----------|--------|
+| HATEOAS   | GET  | `/` | Lista links do sistema |
+| REST      | GET  | `/servicos` | Lista serviços |
+| REST      | GET  | `/clientes` | Lista clientes |
+| SOAP      | GET  | `/disponibilidade?data=YYYY-MM-DD` | Retorna horários |
+| SOAP      | POST | `/agendar` | Agenda serviço |
+| WebSocket | WS   | `/ws` | Notificações |
 
+---
+
+# 📌 4. WSDL
+
+O WSDL é gerado automaticamente pelo servidor SOAP em:
+
+http://localhost:8088/soap/agendamento?wsdl
+
+### Principais tags:
+
+- `<definitions>` – início do WSDL  
+- `<types>` – schemas XML  
+- `<message>` – mensagens de entrada e saída  
+- `<portType>` – operações expostas  
+- `<binding>` – formato SOAP/HTTP  
+- `<service>` – endereço final do serviço  
+
+---
+
+# ✔ 5. Tecnologias usadas
+
+- Python 3.11 + FastAPI  
+- Django REST Framework  
+- Java 21 + JAX-WS RI 2.3.5  
+- Zeep (cliente SOAP)  
+- HTML + JS (frontend)  

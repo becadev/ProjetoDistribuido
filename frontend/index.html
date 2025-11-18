@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>AgendeJá - Cliente Web</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        h2 { margin-top: 30px; }
+        button { padding: 8px 14px; margin-top: 10px; }
+        select, input { padding: 6px; margin: 5px 0; }
+        .card { padding: 10px; border: 1px solid #aaa; margin-bottom: 10px; }
+        #notificacoes { background: #eef; padding: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>AgendeJá - Cliente Web</h1>
+
+    <h2>1. Serviços (REST)</h2>
+    <button onclick="carregarServicos()">Carregar Serviços</button>
+    <div id="servicos"></div>
+
+    <h2>2. Clientes (REST)</h2>
+    <button onclick="carregarClientes()">Carregar Clientes</button>
+    <div id="clientes"></div>
+
+    <h2>3. Consultar Disponibilidade (SOAP)</h2>
+    <input type="date" id="data">
+    <button onclick="consultarDisponibilidade()">Buscar Horários</button>
+    <div id="disponibilidade"></div>
+
+    <h2>4. Agendar Serviço (SOAP)</h2>
+    <div>
+        Cliente ID: <input type="number" id="clienteId"><br>
+        Serviço ID: <input type="number" id="servicoId"><br>
+        Data: <input type="date" id="dataAgendamento"><br>
+        Hora (HH:MM): <input type="text" id="hora"><br>
+        <button onclick="agendar()">Agendar</button>
+    </div>
+
+    <!--<h2>5. Notificações (WebSocket)</h2>
+    <div id="notificacoes">Aguardando notificações...</div>-->
+
+<script>
+const API = "http://localhost:8000";
+
+// -------- REST --------
+async function carregarServicos() {
+    let r = await fetch(API + "/servicos");
+    let data = await r.json();
+
+    let div = document.getElementById("servicos");
+    div.innerHTML = "";
+    data.forEach(s => {
+        div.innerHTML += `<div class="card">ID: ${s.id} - ${s.nome} - R$ ${s.preco} - Tempo: ${s.duracao_min} min</div>`;
+    });
+}
+
+async function carregarClientes() {
+    let r = await fetch(API + "/clientes");
+    let data = await r.json();
+
+    let div = document.getElementById("clientes");
+    div.innerHTML = "";
+    data.forEach(c => {
+        div.innerHTML += `<div class="card">ID: ${c.id} - ${c.nome}</div>`;
+    });
+}
+
+// -------- SOAP --------
+async function consultarDisponibilidade() {
+    let data = document.getElementById("data").value;
+    let r = await fetch(API + "/disponibilidade?data=" + data);
+    let json = await r.json();
+
+    document.getElementById("disponibilidade").innerHTML =
+        "<b>Horários disponíveis:</b> " + json.horarios_disponiveis.join(", ");
+}
+
+async function agendar() {
+    let r = await fetch(API + "/agendar?clienteId=" +
+        document.getElementById("clienteId").value +
+        "&servicoId=" + document.getElementById("servicoId").value +
+        "&data=" + document.getElementById("dataAgendamento").value +
+        "&horaInicio=" + document.getElementById("hora").value,
+        { method: "POST" }
+    );
+
+    let json = await r.json();
+    alert(json.mensagem);
+}
+
+// -------- WebSocket --------
+// let ws = new WebSocket("ws://localhost:8000/ws");
+//ws.onmessage = (event) => {
+  //  document.getElementById("notificacoes").innerHTML += "<br>" + event.data;
+//};
+</script>
+
+</body>
+</html>
