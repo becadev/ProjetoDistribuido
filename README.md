@@ -44,7 +44,7 @@ Camada central que unifica tudo:
                      └────────┬─────────┘
             REST             SOAP                        WEBSOCKET
       ┌────────────────┐ ┌────────────────┐         ┌──────────────────┐
-      │ Django REST    │ │ Java SOAP      │         │    FastAPI WS    │
+      │ Django REST    │ │ JAX-WS SOAP    │         │    FastAPI WS    │
       │ Serviços       │ │ Agendamentos   │ ◄────▶  |    Notificações │
       └────────────────┘ └────────────────┘         └──────────────────┘
 
@@ -75,6 +75,7 @@ Endpoints:
 ## 🟧 2.2 Servidor SOAP (Java 21 com JAX-WS)
 
 JAX-WS foi removido após o Java 8 → por isso incluí as dependências em `/lib`.
+(é a tecnologia projetada para criar web service em SOAP, gera automaticamente o WSDL e permite compatibilidade com o cliente)
 
 ### Compilar:
 
@@ -102,6 +103,7 @@ http://localhost:8088/soap/agendamento?wsdl
 
 cd gateway
 uvicorn main:app --reload --port 8000
+(Uvicorn é o servidor de aplicação do fast api) 
 
 ### Swagger:
 
@@ -153,5 +155,12 @@ http://localhost:8088/soap/agendamento?wsdl
 - Python 3.11 + FastAPI  
 - Django REST Framework  
 - Java 21 + JAX-WS RI 2.3.5  
-- Zeep (cliente SOAP)  
+- Zeep (cliente SOAP) 
 - HTML + JS (frontend)  
+
+# 6. Requisitos
+- Arquitetura que integra REST (Django) e SOAP (Java JAX-WS)
+- Servidor SOAP → Java
+- Cliente SOAP → Python (Zeep)
+- Gateway → Python FastAPI
+- Cliente Web (HTML e CSS)

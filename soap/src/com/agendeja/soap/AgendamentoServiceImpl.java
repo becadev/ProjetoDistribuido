@@ -10,21 +10,35 @@ public class AgendamentoServiceImpl implements AgendamentoService {
 
     @Override
     public String consultarDisponibilidade(String data) {
-        StringBuilder disponiveis = new StringBuilder(); // Horários disponíveis, string builder por que é mais eficiente para concatenações
+        StringBuilder disponiveis = new StringBuilder();
 
-        String[] horarios = {"13:00", "14:00", "15:00", "16:00", "17:00"}; // Horários fixos disponíveis
+        String[] horarios = {"13:00", "14:00", "15:00", "16:00", "17:00"};
 
-        try (Connection conn = Database.connect()) { // Conexão com o banco de dados
-            for (String h : horarios) { // pra cada horário fixo
+        try (Connection conn = Database.connect()) {
+            for (String h : horarios) {
+                LocalTime horarioConsulta = LocalTime.parse(h);
+                boolean ocupado = false;
+
+                // Buscar TODOS os agendamentos confirmados do dia
                 PreparedStatement ps = conn.prepareStatement(
-                        "SELECT * FROM agendamento WHERE data=? AND hora_inicio=? AND status='Confirmado'"
-                ); // Verifica se já existe um agendamento confirmado para aquele dia e hora
-                ps.setString(1, data); // Define o parâmetro data, setando a data fornecida na consulta
-                ps.setString(2, h); // Define o parâmetro hora_inicio, setando o horário fixo atual
+                        "SELECT hora_inicio, hora_fim FROM agendamento WHERE data=? AND status='Confirmado'"
+                );
+                ps.setString(1, data);
+                ResultSet rs = ps.executeQuery();
 
-                ResultSet rs = ps.executeQuery(); // Executa a consulta
+                // Verificar se o horário está dentro de algum agendamento existente
+                while (rs.next()) {
+                    LocalTime inicioOcupado = LocalTime.parse(rs.getString("hora_inicio"));
+                    LocalTime fimOcupado = LocalTime.parse(rs.getString("hora_fim"));
 
-                if (!rs.next()) disponiveis.append(h).append(","); // Se não houver agendamento, adiciona o horário à lista de disponíveis
+                    // Se o horário consultado está entre inicio e fim de um agendamento, está ocupado
+                    if (!horarioConsulta.isBefore(inicioOcupado) && horarioConsulta.isBefore(fimOcupado)) {
+                        ocupado = true;
+                        break;
+                    }
+                }
+
+                if (!ocupado) disponiveis.append(h).append(",");
             }
         } catch (Exception e) {
             return "Erro: " + e.getMessage();
@@ -37,8 +51,8 @@ public class AgendamentoServiceImpl implements AgendamentoService {
     public String agendarServico(int clienteId, int servicoId, String data, String horaInicio) { //agenda serviço passando clienteId, servicoId, data e horaInicio
         try (Connection conn = Database.connect()) { //tenta conexão como banco 
 
-            // Buscar duração
-            PreparedStatement s1 = conn.prepareStatement("SELECT duracao_min FROM servicos WHERE id=?");
+            // Buscar duração (tabela Django: servicos_servico)
+            PreparedStatement s1 = conn.prepareStatement("SELECT duracao_min FROM servicos_servico WHERE id=?");
             s1.setInt(1, servicoId); // Define o parâmetro id, setando o servicoId fornecido
             ResultSet rs1 = s1.executeQuery();
 

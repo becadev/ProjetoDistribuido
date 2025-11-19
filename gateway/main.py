@@ -2,8 +2,9 @@ from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-from zeep import Client
-
+from zeep import Client #interpreta automaticamente o WSDL
+#zeep é uma biblioteca Python para consumir serviços web SOAP. Ela facilita a comunicação com APIs SOAP,
+# permitindo que os desenvolvedores façam chamadas de serviço e manipulem respostas de forma simples
 app = FastAPI(title="API Gateway - AgendeJá")
 
 # ---------------------------------------------------------------------
@@ -39,6 +40,8 @@ def gateway_root():
             "clientes": "/clientes",
             "agendar": "/agendar",
             "disponibilidade": "/disponibilidade?data=YYYY-MM-DD",
+            "cancelar": "/cancelar",
+            "listarAgendamentos": "/listarAgendamentos",
             #"websocket": "/ws",
         }
     }
@@ -77,6 +80,17 @@ def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
 
     return {"mensagem": resposta}
 
+@app.delete("/cancelar")
+def cancelar(agendamentoId: int):
+    resposta = soap_client.service.cancelarAgendamento(agendamentoId)
+    return {"mensagem": resposta}
+
+@app.get("/listarAgendamentos")
+def listar_agendamentos():
+    resposta = soap_client.service.listarAgendamentos()
+    import json
+    agendamentos = json.loads(resposta)
+    return {"agendamentos": agendamentos}
 
 # ---------------------------------------------------------------------
 # SERVIÇO WEBSOCKET (notificações)
