@@ -15,4 +15,7 @@ public interface AgendamentoService {
 
     @WebMethod
     String cancelarAgendamento(int id);
+
+    @WebMethod
+    String listarAgendamentos();
 }

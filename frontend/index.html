@@ -38,6 +38,16 @@
         <button onclick="agendar()">Agendar</button>
     </div>
 
+    <h2>5. Cancelar Agendamento (SOAP)</h2>
+    <div>
+        Agendamento ID: <input type="number" id="agendamentoId"><br>
+        <button onclick="cancelar()">Cancelar</button>
+    </div>
+
+    <h2>6. Listar Agendamentos (SOAP)</h2>
+    <button onclick="listarAgendamentos()">Listar Agendamentos</button>
+    <div id="agendamentos"></div>
+
     <!--<h2>5. Notificações (WebSocket)</h2>
     <div id="notificacoes">Aguardando notificações...</div>-->
 
@@ -88,6 +98,27 @@ async function agendar() {
 
     let json = await r.json();
     alert(json.mensagem);
+}
+
+async function cancelar() {
+    let r = await fetch(API + "/cancelar?agendamentoId=" +
+        document.getElementById("agendamentoId").value,
+        { method: "DELETE" }
+    );
+
+    let json = await r.json();
+    alert(json.mensagem);
+}
+
+async function listarAgendamentos() {
+    let r = await fetch(API + "/listarAgendamentos");
+    let json = await r.json();
+
+    let div = document.getElementById("agendamentos");
+    div.innerHTML = "<h3>Agendamentos:</h3>";
+    json.agendamentos.forEach(a => {
+        div.innerHTML += `<div class="card">ID: ${a.id} - Cliente: ${a.cliente_nome} - Serviço: ${a.servico_nome} - Data: ${a.data} - Hora Início: ${a.hora_inicio}</div>`;
+    });
 }
 
 // -------- WebSocket --------

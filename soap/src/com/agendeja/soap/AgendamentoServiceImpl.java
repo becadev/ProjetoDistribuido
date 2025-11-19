@@ -111,4 +111,46 @@ public class AgendamentoServiceImpl implements AgendamentoService {
             return "Erro: " + e.getMessage();
         }
     }
+
+    @Override
+    public String listarAgendamentos() {
+        StringBuilder json = new StringBuilder("[");
+
+        try (Connection conn = Database.connect()) {
+            PreparedStatement ps = conn.prepareStatement(
+                "SELECT a.id, a.cliente_id, a.servico_id, a.data, a.hora_inicio, a.hora_fim, a.status, " +
+                "c.nome as cliente_nome, s.nome as servico_nome " +
+                "FROM agendamento a " +
+                "LEFT JOIN servicos_cliente c ON a.cliente_id = c.id " +
+                "LEFT JOIN servicos_servico s ON a.servico_id = s.id " +
+                "WHERE a.status = 'Confirmado' " +
+                "ORDER BY a.data, a.hora_inicio"
+            );
+            ResultSet rs = ps.executeQuery();
+
+            boolean primeiro = true;
+            while (rs.next()) {
+                if (!primeiro) json.append(",");
+                primeiro = false;
+
+                json.append("{")
+                    .append("\"id\":").append(rs.getInt("id")).append(",")
+                    .append("\"cliente_id\":").append(rs.getInt("cliente_id")).append(",")
+                    .append("\"cliente_nome\":\"").append(rs.getString("cliente_nome") != null ? rs.getString("cliente_nome") : "").append("\",")
+                    .append("\"servico_id\":").append(rs.getInt("servico_id")).append(",")
+                    .append("\"servico_nome\":\"").append(rs.getString("servico_nome") != null ? rs.getString("servico_nome") : "").append("\",")
+                    .append("\"data\":\"").append(rs.getString("data")).append("\",")
+                    .append("\"hora_inicio\":\"").append(rs.getString("hora_inicio")).append("\",")
+                    .append("\"hora_fim\":\"").append(rs.getString("hora_fim")).append("\",")
+                    .append("\"status\":\"").append(rs.getString("status")).append("\"")
+                    .append("}");
+            }
+
+        } catch (Exception e) {
+            return "{\"erro\":\"" + e.getMessage() + "\"}";
+        }
+
+        json.append("]");
+        return json.toString();
+    }
 }
