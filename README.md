@@ -56,6 +56,8 @@ venv\Scripts\activate
 
 pip install -r requirements.txt
 
+Abra 3 terminais e ative o ambiente virtual nos três, após isso em cada prompt rode cada ponto abaixo (rest (django), soap (java) e gateway (fast api)).
+
 ## 🔵 2.1 API REST (Django)
 
 cd agendeja_rest
