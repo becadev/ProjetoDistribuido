@@ -64,6 +64,8 @@ python manage.py migrate
 
 python manage.py runserver 5001
 
+#### Crie o super user para cadastrar serviços e clientes pelo admin
+
 Endpoints:
 
 - http://localhost:5001/servicos  
@@ -129,7 +131,7 @@ frontend/index.html
 | REST      | GET  | `/clientes` | Lista clientes |
 | SOAP      | GET  | `/disponibilidade?data=YYYY-MM-DD` | Retorna horários |
 | SOAP      | POST | `/agendar` | Agenda serviço |
-| SOAP      | DELETE | `/cancelar` | CAncelar agendamento |
+| SOAP      | DELETE | `/cancelar` | Cancelar agendamento |
 | SOAP      | GET  | `/listarAgendamentos` | Listar agendamento |
 | WebSocket | WS   | `/ws` | Notificações |
 
