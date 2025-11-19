@@ -129,6 +129,8 @@ frontend/index.html
 | REST      | GET  | `/clientes` | Lista clientes |
 | SOAP      | GET  | `/disponibilidade?data=YYYY-MM-DD` | Retorna horários |
 | SOAP      | POST | `/agendar` | Agenda serviço |
+| SOAP      | DELETE | `/cancelar` | CAncelar agendamento |
+| SOAP      | GET  | `/listarAgendamentos` | Listar agendamento |
 | WebSocket | WS   | `/ws` | Notificações |
 
 ---
