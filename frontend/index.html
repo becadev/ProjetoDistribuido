@@ -2,131 +2,95 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>AgendeJá - Cliente Web</title>
-    <style>
-        body { font-family: Arial; margin: 20px; }
-        h2 { margin-top: 30px; }
-        button { padding: 8px 14px; margin-top: 10px; }
-        select, input { padding: 6px; margin: 5px 0; }
-        .card { padding: 10px; border: 1px solid #aaa; margin-bottom: 10px; }
-        #notificacoes { background: #eef; padding: 10px; margin-top: 20px; }
-    </style>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Agende Já - Cliente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-    <h1>AgendeJá - Cliente Web</h1>
+    <div class="container">
 
-    <h2>1. Serviços (REST)</h2>
-    <button onclick="carregarServicos()">Carregar Serviços</button>
-    <div id="servicos"></div>
+        <header class="header">
+            <h1 class="brand">Agende Já</h1>
+            <p class="tagline">Agendamentos fáceis, rápidps e elegantes </p>
+        </header>
 
-    <h2>2. Clientes (REST)</h2>
-    <button onclick="carregarClientes()">Carregar Clientes</button>
-    <div id="clientes"></div>
+        <section class="card-section">
+        <div class="card">
+            <h2 class="card-title">1. Serviços</h2>
+            <button id="btnCarregarServicos" class="btn btn-primary">Carregar Serviços</button>
+            <div id="servicos" class="card-list"></div>
+        </div>
 
-    <h2>3. Consultar Disponibilidade (SOAP)</h2>
-    <input type="date" id="data">
-    <button onclick="consultarDisponibilidade()">Buscar Horários</button>
-    <div id="disponibilidade"></div>
+        <div class="card">
+            <h2 class="card-title">2. Clientes</h2>
+            <button id="btnCarregarClientes" class="btn btn-primary">Carregar Clientes</button>
+            <div id="clientes" class="card-list"></div>
+        </div>
 
-    <h2>4. Agendar Serviço (SOAP)</h2>
-    <div>
-        Cliente ID: <input type="number" id="clienteId"><br>
-        Serviço ID: <input type="number" id="servicoId"><br>
-        Data: <input type="date" id="dataAgendamento"><br>
-        Hora (HH:MM): <input type="text" id="hora"><br>
-        <button onclick="agendar()">Agendar</button>
+        <div class="card">
+            <h2 class="card-title">3. Consultar Disponibilidade</h2>
+            <div class="form-row">
+                <input type="date" id="data" class="input">
+                <button id="btnConsultarDisponibilidade" class="btn btn-primary">Buscar Horários</button>
+            </div>
+            <div id="disponibilidade" class="card-list"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">4. Agendar Serviço</h2>
+            <div class="form-grid">
+                <input type="number" id="clienteId" placeholder="Cliente ID" class="input">
+                <input type="number" id="servicoId" placeholder="Serviço ID" class="input">
+                <input type="date" id="dataAgendamento" class="input">
+                <input type="text" id="hora" placeholder="Hora (HH:MM)" class="input">
+            </div>
+            <div class="mt-2">
+                <button id="btnAgendar" class="btn btn-success">Agendar</button>
+            </div>
+            <div id="resultadoAgendar" class="card-list"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">5. Cancelar Agendamento</h2>
+            <div class="form-row">
+                <input type="number" id="agendamentoId" placeholder="Agendamento ID" class="input">
+                <button id="btnCancelar" class="btn btn-danger">Cancelar</button>
+            </div>
+            <div id="resultadoCancelar" class="card-list"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">6. Listar Agendamentos</h2>
+            <div class="mt-2">
+                <button id="btnListarAgendamentos" class="btn btn-primary">Listar Agendamentos</button>
+            </div>
+            <div id="agendamentos" class="card-list"></div>
+        </div>
+        </section>
+
     </div>
 
-    <h2>5. Cancelar Agendamento (SOAP)</h2>
-    <div>
-        Agendamento ID: <input type="number" id="agendamentoId"><br>
-        <button onclick="cancelar()">Cancelar</button>
+    <div id="modal" class="modal" aria-hidden="true">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-window">
+            <header class="modal-header">
+                <h3 id="modalTitle">Título</h3>
+                <button id="modalCloseBtn" class="modal-close" aria-label="Fechar">×</button>
+            </header>
+            <div class="modal-body">
+                <p id="modalMessage">Mensagem</p>
+            </div>
+            <footer class="modal-footer">
+                <button id="modalOk" class="btn btn-primary">OK</button>
+            </footer>
+        </div>
     </div>
 
-    <h2>6. Listar Agendamentos (SOAP)</h2>
-    <button onclick="listarAgendamentos()">Listar Agendamentos</button>
-    <div id="agendamentos"></div>
-
-    <!--<h2>5. Notificações (WebSocket)</h2>
-    <div id="notificacoes">Aguardando notificações...</div>-->
-
-<script>
-const API = "http://localhost:8000";
-
-// -------- REST --------
-async function carregarServicos() {
-    let r = await fetch(API + "/servicos");
-    let data = await r.json();
-
-    let div = document.getElementById("servicos");
-    div.innerHTML = "";
-    data.forEach(s => {
-        div.innerHTML += `<div class="card">ID: ${s.id} - ${s.nome} - R$ ${s.preco} - Tempo: ${s.duracao_min} min</div>`;
-    });
-}
-
-async function carregarClientes() {
-    let r = await fetch(API + "/clientes");
-    let data = await r.json();
-
-    let div = document.getElementById("clientes");
-    div.innerHTML = "";
-    data.forEach(c => {
-        div.innerHTML += `<div class="card">ID: ${c.id} - ${c.nome}</div>`;
-    });
-}
-
-// -------- SOAP --------
-async function consultarDisponibilidade() {
-    let data = document.getElementById("data").value;
-    let r = await fetch(API + "/disponibilidade?data=" + data);
-    let json = await r.json();
-
-    document.getElementById("disponibilidade").innerHTML =
-        "<b>Horários disponíveis:</b> " + json.horarios_disponiveis.join(", ");
-}
-
-async function agendar() {
-    let r = await fetch(API + "/agendar?clienteId=" +
-        document.getElementById("clienteId").value +
-        "&servicoId=" + document.getElementById("servicoId").value +
-        "&data=" + document.getElementById("dataAgendamento").value +
-        "&horaInicio=" + document.getElementById("hora").value,
-        { method: "POST" }
-    );
-
-    let json = await r.json();
-    alert(json.mensagem);
-}
-
-async function cancelar() {
-    let r = await fetch(API + "/cancelar?agendamentoId=" +
-        document.getElementById("agendamentoId").value,
-        { method: "DELETE" }
-    );
-
-    let json = await r.json();
-    alert(json.mensagem);
-}
-
-async function listarAgendamentos() {
-    let r = await fetch(API + "/listarAgendamentos");
-    let json = await r.json();
-
-    let div = document.getElementById("agendamentos");
-    div.innerHTML = "<h3>Agendamentos:</h3>";
-    json.agendamentos.forEach(a => {
-        div.innerHTML += `<div class="card">ID: ${a.id} - Cliente: ${a.cliente_nome} - Serviço: ${a.servico_nome} - Data: ${a.data} - Hora Início: ${a.hora_inicio}</div>`;
-    });
-}
-
-// -------- WebSocket --------
-// let ws = new WebSocket("ws://localhost:8000/ws");
-//ws.onmessage = (event) => {
-  //  document.getElementById("notificacoes").innerHTML += "<br>" + event.data;
-//};
-</script>
+    <script src="app.js" defer></script>
 
 </body>
 </html>
