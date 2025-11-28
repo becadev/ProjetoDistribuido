@@ -4,7 +4,6 @@ Este projeto implementa uma arquitetura distribuída contendo:
 
 - 🟦 **REST (Django)** → serviços, clientes, catálogo  
 - 🟧 **SOAP (Java JAX-WS)** → agendamentos  
-- 🟩 **WebSocket (FastAPI)** → notificações em tempo real  
 - 🟥 **API Gateway (FastAPI)** → unifica REST + SOAP + WS com HATEOAS  
 
 # 📌 1. Conceitos principais
@@ -17,16 +16,12 @@ Utilizado aqui com Django REST Framework.
 SOAP é um protocolo mais rígido baseado em XML + WSDL.
 Utilizado aqui com Java 21 + JAX-WS (lib externa, pois JAX-WS só vai até Java 8).
 
-### ✔ WebSocket
-Canal bidirecional para notificações em tempo real.
-
 ### ✔ API Gateway
 Camada central que unifica tudo:
 
 - recebe requisições do cliente web  
 - chama REST (Django)  
 - chama SOAP (Java)  
-- expõe WebSocket  
 - retorna tudo em JSON  
 - implementa HATEOAS  
 
@@ -42,11 +37,11 @@ Camada central que unifica tudo:
                      │   (FastAPI)      │
                      │   c/ HATEOAS     │
                      └────────┬─────────┘
-            REST             SOAP                        WEBSOCKET
-      ┌────────────────┐ ┌────────────────┐         ┌──────────────────┐
-      │ Django REST    │ │ JAX-WS SOAP    │         │    FastAPI WS    │
-      │ Serviços       │ │ Agendamentos   │ ◄────▶  |    Notificações │
-      └────────────────┘ └────────────────┘         └──────────────────┘
+                  REST             SOAP                       
+            ┌────────────────┐ ┌────────────────┐         
+            │ Django REST    │ │ JAX-WS SOAP    │        
+            │ Serviços       │ │ Agendamentos   │ 
+            └────────────────┘ └────────────────┘        
 
 
 # 📌 2. Como rodar o projeto
@@ -135,7 +130,6 @@ frontend/index.html
 | SOAP      | POST | `/agendar` | Agenda serviço |
 | SOAP      | DELETE | `/cancelar` | Cancelar agendamento |
 | SOAP      | GET  | `/listarAgendamentos` | Listar agendamento |
-| WebSocket | WS   | `/ws` | Notificações |
 
 ---
 

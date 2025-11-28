@@ -95,16 +95,16 @@ def listar_agendamentos():
 # ---------------------------------------------------------------------
 # SERVIÇO WEBSOCKET (notificações)
 # ---------------------------------------------------------------------
-connected_websockets = []
+# connected_websockets = []
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    connected_websockets.append(websocket)
+# @app.websocket("/ws")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     connected_websockets.append(websocket)
 
-    try:
-        while True:
-            await websocket.receive_text()
-    except:
-        connected_websockets.remove(websocket)
+#     try:
+#         while True:
+#             await websocket.receive_text()
+#     except:
+#        connected_websockets.remove(websocket)
 
