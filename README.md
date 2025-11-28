@@ -101,8 +101,8 @@ http://localhost:8088/soap/agendamento?wsdl
 ### Rodar:
 
 cd gateway
-uvicorn main:app --reload --port 8000
-(Uvicorn é o servidor de aplicação do fast api) 
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+(Uvicorn é o servidor de aplicação do fast api, rodamos com host para permitir que outros hosts acessem a api.) 
 
 ### Swagger:
 
