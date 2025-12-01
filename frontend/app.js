@@ -1,5 +1,6 @@
 const API = "http://localhost:8000";
 
+// ===== UTILITY FUNCTIONS =====
 function showMessage(containerId, message, type = 'info') {
     const el = document.getElementById(containerId);
     if (!el) return;
@@ -12,178 +13,257 @@ function showMessage(containerId, message, type = 'info') {
     }
 }
 
-function showModal(title, message, isSuccess = true) {
-    const modal = document.getElementById('modal');
-    const t = document.getElementById('modalTitle');
-    const m = document.getElementById('modalMessage');
-    if (!modal || !t || !m) return;
-    t.textContent = title || (isSuccess ? 'Sucesso' : 'Aviso');
-    m.textContent = message || '';
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-}
-
-function closeModal() {
-    const modal = document.getElementById('modal');
-    if (!modal) return;
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-}
-
 function makeCardHtml(content) {
     return `<div class="p-3 border border-gray-200 rounded-md bg-gray-50 text-sm mb-2">${content}</div>`;
 }
 
-function formatErrorMessage(err) {
-    if (!err) return 'Erro desconhecido.';
-    const raw = (err.message || String(err)).toString();
-    // Detect common network/browser error texts (in English) and map to Portuguese
-    if (/failed to fetch/i.test(raw) || /networkerror/i.test(raw) || /network request failed/i.test(raw)) {
-        return 'Erro de rede: não foi possível conectar ao servidor. Verifique se o backend está em execução e se o endereço está correto.';
-    }
-    if (/timeout/i.test(raw)) return 'Tempo de conexão esgotado. Tente novamente.';
-    // Remove repetitive technical prefixes like TypeError:
-    return raw.replace(/^TypeError:\s*/i, 'Erro: ');
+// ===== AUTH FUNCTIONS =====
+function getUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
 }
 
-async function carregarServicos() {
-    const container = 'servicos';
+function logout() {
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+}
+
+function checkAuth(requiredRole) {
+    const user = getUser();
+    if (!user || (requiredRole && user.role !== requiredRole)) {
+        window.location.href = 'login.html';
+        return null;
+    }
+    return user;
+}
+
+// ===== SERVICOS =====
+async function carregarServicos(containerId = 'servicos', selectId = 'servicoId') {
+    const container = containerId;
     showMessage(container, 'Carregando serviços...', 'loading');
     try {
         const r = await fetch(`${API}/servicos`);
-        if (!r.ok) throw new Error(`Falha ao carregar serviços: ${r.status} ${r.statusText}`);
+        if (!r.ok) throw new Error(`Falha ao carregar serviços: ${r.status}`);
         const data = await r.json();
-        const el = document.getElementById(container);
-        el.innerHTML = '';
+        
+        const div = document.getElementById(container);
+        const select = selectId ? document.getElementById(selectId) : null;
+        
+        div.innerHTML = '';
+        if (select) {
+            select.innerHTML = "<option value=''>Selecione...</option>";
+        }
+        
         if (!Array.isArray(data) || data.length === 0) {
-            el.innerHTML = makeCardHtml('Nenhum serviço encontrado.');
+            div.innerHTML = makeCardHtml('Nenhum serviço encontrado.');
             return;
         }
+        
         data.forEach(s => {
-            const content = `ID: ${s.id} - ${s.nome} - R$ ${s.preco} - Tempo: ${s.duracao_min} min`;
-            el.innerHTML += makeCardHtml(content);
+            div.innerHTML += `<div class="card">
+                <strong>${s.nome}</strong> - R$ ${s.preco} - ${s.duracao_min} min<br>
+                ${s.descricao || ''}
+            </div>`;
+            if (select) {
+                select.innerHTML += `<option value="${s.id}">${s.nome}</option>`;
+            }
         });
     } catch (err) {
         console.error(err);
-        showMessage(container, 'Falha ao carregar serviços. Tente novamente.', 'error');
+        showMessage(container, 'Falha ao carregar serviços.', 'error');
     }
 }
 
+async function carregarServicosProfissional() {
+    try {
+        const r = await fetch(`${API}/servicos`);
+        if (!r.ok) throw new Error('Falha ao carregar');
+        const data = await r.json();
+        
+        const div = document.getElementById('servicos');
+        div.innerHTML = '';
+        
+        if (data.length === 0) {
+            div.innerHTML = "<p>Nenhum serviço cadastrado.</p>";
+        } else {
+            data.forEach(s => {
+                div.innerHTML += `<div class="card">
+                    <strong>${s.nome}</strong> - R$ ${s.preco} - ${s.duracao_min} min<br>
+                    ${s.descricao}<br>
+                    <button class="btn btn-danger" onclick="deletarServico(${s.id})">Excluir</button>
+                </div>`;
+            });
+        }
+    } catch (err) {
+        alert('Erro ao carregar serviços');
+    }
+}
+
+async function deletarServico(id) {
+    if (!confirm('Deseja realmente excluir este serviço?')) return;
+    try {
+        const response = await fetch(`${API}/servicos/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            alert('Serviço excluído com sucesso!');
+            carregarServicosProfissional();
+        } else {
+            alert('Erro ao excluir serviço');
+        }
+    } catch (error) {
+        alert('Erro de conexão: ' + error.message);
+    }
+}
+
+// ===== CLIENTES =====
 async function carregarClientes() {
     const container = 'clientes';
     showMessage(container, 'Carregando clientes...', 'loading');
     try {
         const r = await fetch(`${API}/clientes`);
-        if (!r.ok) throw new Error(`Falha ao carregar clientes: ${r.status} ${r.statusText}`);
+        if (!r.ok) throw new Error(`Falha: ${r.status}`);
         const data = await r.json();
+        
         const el = document.getElementById(container);
         el.innerHTML = '';
+        
         if (!Array.isArray(data) || data.length === 0) {
             el.innerHTML = makeCardHtml('Nenhum cliente encontrado.');
             return;
         }
+        
         data.forEach(c => {
-            const content = `ID: ${c.id} - ${c.nome}`;
+            const content = `<strong>${c.nome || 'Nome não disponível'}</strong><br>CPF: ${c.cpf}<br>Email: ${c.email || 'N/A'}<br>Telefone: ${c.telefone || 'N/A'}`;
             el.innerHTML += makeCardHtml(content);
         });
     } catch (err) {
         console.error(err);
-        showMessage(container, 'Falha ao carregar clientes. Tente novamente.', 'error');
+        showMessage(container, 'Falha ao carregar clientes.', 'error');
     }
 }
 
+// ===== DISPONIBILIDADE =====
 async function consultarDisponibilidade() {
     const container = 'disponibilidade';
     const dataVal = document.getElementById('data').value;
-    if (!dataVal) { showMessage(container, 'Escolha uma data antes de buscar.', 'error'); return; }
-    showMessage(container, 'Consultando disponibilidade...', 'loading');
+    if (!dataVal) {
+        showMessage(container, 'Escolha uma data.', 'error');
+        return;
+    }
+    
+    showMessage(container, 'Consultando...', 'loading');
     try {
         const r = await fetch(`${API}/disponibilidade?data=${encodeURIComponent(dataVal)}`);
-        if (!r.ok) throw new Error(`Falha na consulta: ${r.status} ${r.statusText}`);
+        if (!r.ok) throw new Error(`Falha: ${r.status}`);
         const json = await r.json();
-        if (!json.horarios_disponiveis || !Array.isArray(json.horarios_disponiveis)) {
-            showMessage(container, 'Resposta inesperada do servidor.', 'error');
-            return;
-        }
-        const lista = json.horarios_disponiveis.length ? json.horarios_disponiveis.join(', ') : 'Nenhum horário disponível';
-        showMessage(container, `<b>Horários disponíveis:</b> ${lista}`);
+        
+        const lista = json.horarios_disponiveis && json.horarios_disponiveis.length 
+            ? json.horarios_disponiveis.join(', ') 
+            : 'Nenhum horário disponível';
+        showMessage(container, `<div class='card'><b>Horários disponíveis:</b> ${lista}</div>`);
     } catch (err) {
         console.error(err);
-        showMessage(container, 'Falha ao consultar disponibilidade. Tente novamente.', 'error');
+        showMessage(container, 'Falha ao consultar.', 'error');
     }
 }
 
+// ===== AGENDAMENTOS =====
 async function agendar() {
-    const container = 'resultadoAgendar';
-    const clienteId = document.getElementById('clienteId').value;
+    const user = getUser();
+    if (!user) return;
+    
+    const clienteId = user.profile_id;
     const servicoId = document.getElementById('servicoId').value;
     const dataAg = document.getElementById('dataAgendamento').value;
     const hora = document.getElementById('hora').value;
 
-    if (!clienteId || !servicoId || !dataAg || !hora) {
-        showModal('Erro', 'Preencha todos os campos para agendar.', false);
+    if (!servicoId || !dataAg || !hora) {
+        alert('Preencha todos os campos.');
         return;
     }
 
-    showMessage(container, 'Enviando solicitação de agendamento...', 'loading');
     try {
-        const url = `${API}/agendar?clienteId=${encodeURIComponent(clienteId)}&servicoId=${encodeURIComponent(servicoId)}&data=${encodeURIComponent(dataAg)}&horaInicio=${encodeURIComponent(hora)}`;
+        const url = `${API}/agendar?clienteId=${clienteId}&servicoId=${servicoId}&data=${dataAg}&horaInicio=${hora}`;
         const r = await fetch(url, { method: 'POST' });
-        if (!r.ok) {
-            let text = await r.text();
-            throw new Error(`Falha ao agendar: ${r.status} ${r.statusText} ${text}`);
-        }
+        if (!r.ok) throw new Error('Falha ao agendar');
+        
         const json = await r.json();
-        showModal('Agendamento', json.mensagem || 'Agendamento realizado com sucesso.', true);
+        alert(json.mensagem || 'Agendamento realizado!');
+        listarAgendamentos();
     } catch (err) {
         console.error(err);
-        showModal('Erro', 'Falha ao agendar. Tente novamente.', false);
+        alert('Erro ao agendar.');
     }
 }
 
 async function cancelar() {
-    const container = 'resultadoCancelar';
     const agendamentoId = document.getElementById('agendamentoId').value;
-    if (!agendamentoId) { showModal('Erro', 'Informe o ID do agendamento a ser cancelado.', false); return; }
-    showMessage(container, 'Enviando solicitação de cancelamento...', 'loading');
+    if (!agendamentoId) {
+        alert('Informe o ID do agendamento.');
+        return;
+    }
+    
     try {
-        const url = `${API}/cancelar?agendamentoId=${encodeURIComponent(agendamentoId)}`;
+        const url = `${API}/cancelar?agendamentoId=${agendamentoId}`;
         const r = await fetch(url, { method: 'DELETE' });
-        if (!r.ok) {
-            let text = await r.text();
-            throw new Error(`Falha ao cancelar: ${r.status} ${r.statusText} ${text}`);
-        }
+        if (!r.ok) throw new Error('Falha ao cancelar');
+        
         const json = await r.json();
-        showModal('Cancelamento', json.mensagem || 'Cancelamento realizado.', true);
+        alert(json.mensagem || 'Cancelamento realizado.');
+        listarAgendamentos();
     } catch (err) {
         console.error(err);
-        showModal('Erro', 'Falha ao cancelar. Tente novamente.', false);
+        alert('Erro ao cancelar.');
     }
 }
 
 async function listarAgendamentos() {
     const container = 'agendamentos';
-    showMessage(container, 'Carregando agendamentos...', 'loading');
+    const user = getUser();
+    
     try {
         const r = await fetch(`${API}/listarAgendamentos`);
-        if (!r.ok) throw new Error(`Falha ao listar agendamentos: ${r.status} ${r.statusText}`);
+        if (!r.ok) throw new Error('Falha ao listar');
         const json = await r.json();
-        const el = document.getElementById(container);
-        el.innerHTML = '<h3 class="font-medium">Agendamentos:</h3>';
-        if (!json.agendamentos || json.agendamentos.length === 0) {
-            el.innerHTML += makeCardHtml('Nenhum agendamento encontrado.');
+        
+        const div = document.getElementById(container);
+        div.innerHTML = '';
+        
+        let agendamentos = json.agendamentos || [];
+        
+        // Garantir que agendamentos é um array
+        if (!Array.isArray(agendamentos)) {
+            console.error('agendamentos não é um array:', agendamentos);
+            div.innerHTML = '<p>Erro: formato de dados inválido.</p>';
             return;
         }
-        json.agendamentos.forEach(a => {
-            const content = `ID: ${a.id} - Cliente: ${a.cliente_nome || a.cliente_id} - Serviço: ${a.servico_nome || a.servico_id} - Data: ${a.data} - Hora Início: ${a.hora_inicio}`;
-            el.innerHTML += makeCardHtml(content);
-        });
+        
+        // Se for cliente, filtrar apenas os seus
+        if (user && user.role === 'cliente') {
+            agendamentos = agendamentos.filter(a => a.cliente_id == user.profile_id);
+        }
+        
+        if (agendamentos.length === 0) {
+            div.innerHTML = '<p>Nenhum agendamento encontrado.</p>';
+        } else {
+            agendamentos.forEach(a => {
+                div.innerHTML += `<div class="card">
+                    <strong>ID:</strong> ${a.id}<br>
+                    ${user && user.role === 'profissional' ? `<strong>Cliente:</strong> ${a.cliente_nome || 'ID ' + a.cliente_id}<br>` : ''}
+                    <strong>Serviço:</strong> ${a.servico_nome || 'ID ' + a.servico_id}<br>
+                    <strong>Data:</strong> ${a.data} às ${a.hora_inicio}<br>
+                    <strong>Status:</strong> ${a.status}
+                </div>`;
+            });
+        }
     } catch (err) {
         console.error(err);
-        showMessage(container, 'Falha ao listar agendamentos. Tente novamente.', 'error');
+        if (document.getElementById(container)) {
+            document.getElementById(container).innerHTML = '<p>Erro ao carregar agendamentos.</p>';
+        }
     }
 }
 
+// ===== INIT (for index.html) =====
 function init() {
     const map = [
         ['btnCarregarServicos', carregarServicos],
@@ -197,24 +277,38 @@ function init() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', fn);
     });
-
-    // Modal event bindings
-    const modalClose = document.getElementById('modalCloseBtn');
-    const modalOk = document.getElementById('modalOk');
-    const modalOverlay = document.getElementById('modalOverlay');
-    if (modalClose) modalClose.addEventListener('click', closeModal);
-    if (modalOk) modalOk.addEventListener('click', closeModal);
-    if (modalOverlay) modalOverlay.addEventListener('click', closeModal);
 }
 
-init();
+// Auto-init if buttons exist
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
-// Export for debugging in console (optional)
+// Export all functions to window for onclick handlers
+window.logout = logout;
+window.checkAuth = checkAuth;
+window.getUser = getUser;
+window.carregarServicos = carregarServicos;
+window.carregarServicosProfissional = carregarServicosProfissional;
+window.deletarServico = deletarServico;
+window.carregarClientes = carregarClientes;
+window.consultarDisponibilidade = consultarDisponibilidade;
+window.agendar = agendar;
+window.cancelar = cancelar;
+window.listarAgendamentos = listarAgendamentos;
+
 window.app = {
     carregarServicos,
+    carregarServicosProfissional,
+    deletarServico,
     carregarClientes,
     consultarDisponibilidade,
     agendar,
     cancelar,
-    listarAgendamentos
+    listarAgendamentos,
+    logout,
+    checkAuth,
+    getUser
 };

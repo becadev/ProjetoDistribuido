@@ -119,9 +119,10 @@ public class AgendamentoServiceImpl implements AgendamentoService {
         try (Connection conn = Database.connect()) {
             PreparedStatement ps = conn.prepareStatement(
                 "SELECT a.id, a.cliente_id, a.servico_id, a.data, a.hora_inicio, a.hora_fim, a.status, " +
-                "c.nome as cliente_nome, s.nome as servico_nome " +
+                "u.nome as cliente_nome, s.nome as servico_nome " +
                 "FROM agendamento a " +
                 "LEFT JOIN servicos_cliente c ON a.cliente_id = c.id " +
+                "LEFT JOIN servicos_usuario u ON c.usuario_id = u.id " +
                 "LEFT JOIN servicos_servico s ON a.servico_id = s.id " +
                 "WHERE a.status = 'Confirmado' " +
                 "ORDER BY a.data, a.hora_inicio"

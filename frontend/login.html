@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AgendeJá</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .form-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #218838;
+        }
+        .link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Login - AgendeJá</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="username" required>
+            </div>
+
+            <div class="form-group">
+                <label>Senha:</label>
+                <input type="password" id="password" required>
+            </div>
+
+            <button type="submit" class="btn">Entrar</button>
+            
+            <div class="error" id="errorMsg"></div>
+        </form>
+
+        <div class="link">
+            <p>Não tem conta? <a href="register.html">Cadastre-se</a></p>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://localhost:8000";
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.sucesso) {
+                    // Salvar dados do usuário no localStorage
+                    localStorage.setItem('user', JSON.stringify(result));
+                    
+                    // Redirecionar baseado no role
+                    if (result.role === 'cliente') {
+                        window.location.href = 'cliente_dashboard.html';
+                    } else if (result.role === 'profissional') {
+                        window.location.href = 'profissional_dashboard.html';
+                    } else {
+                        alert('Perfil não identificado');
+                    }
+                } else {
+                    document.getElementById('errorMsg').textContent = result.erro || 'Credenciais inválidas';
+                }
+            } catch (error) {
+                document.getElementById('errorMsg').textContent = 'Erro de conexão: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

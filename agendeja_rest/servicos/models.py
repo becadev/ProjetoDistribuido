@@ -1,5 +1,29 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
+class Usuario(AbstractUser):
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(unique=True)
+    nome = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.username
+
+class Cliente(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='cliente')
+    cpf = models.CharField(max_length=14, unique=True)
+
+    def __str__(self):
+        return self.usuario.nome
+    
+class Profissional(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='profissional')
+    especialidade = models.CharField(max_length=100, blank=True)
+    cnpj = models.CharField(max_length=18, unique=True)
+
+    def __str__(self):
+        return self.usuario.nome
+    
 class Servico(models.Model):
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True)
@@ -12,10 +36,4 @@ class Servico(models.Model):
         return self.nome
 
 
-class Cliente(models.Model):
-    nome = models.CharField(max_length=100)
-    telefone = models.CharField(max_length=20)
-    email = models.CharField(max_length=100, blank=True)
 
-    def __str__(self):
-        return self.nome

@@ -15,62 +15,15 @@
 
         <header class="header">
             <h1 class="brand">Agende Já</h1>
-            <p class="tagline">Agendamentos fáceis e rápidos </p>
+            <p class="tagline">Agendamentos fáceis e rápidos</p>
         </header>
 
-        <section class="card-section">
-        <div class="card">
-            <h2 class="card-title">1. Serviços</h2>
-            <button id="btnCarregarServicos" class="btn btn-primary">Carregar Serviços</button>
-            <div id="servicos" class="card-list"></div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title">2. Clientes</h2>
-            <button id="btnCarregarClientes" class="btn btn-primary">Carregar Clientes</button>
-            <div id="clientes" class="card-list"></div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title">3. Consultar Disponibilidade</h2>
-            <div class="form-row">
-                <input type="date" id="data" class="input">
-                <button id="btnConsultarDisponibilidade" class="btn btn-primary">Buscar Horários</button>
+        <Section>
+            <div style="margin-top: 20px;">
+                <a href="login.html" style="padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px;">Entrar</a>
+                <a href="register.html" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Cadastrar</a>
             </div>
-            <div id="disponibilidade" class="card-list"></div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title">4. Agendar Serviço</h2>
-            <div class="form-grid">
-                <input type="number" id="clienteId" placeholder="Cliente ID" class="input">
-                <input type="number" id="servicoId" placeholder="Serviço ID" class="input">
-                <input type="date" id="dataAgendamento" class="input">
-                <input type="text" id="hora" placeholder="Hora (HH:MM)" class="input">
-            </div>
-            <div class="mt-2">
-                <button id="btnAgendar" class="btn btn-success">Agendar</button>
-            </div>
-            <div id="resultadoAgendar" class="card-list"></div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title">5. Cancelar Agendamento</h2>
-            <div class="form-row">
-                <input type="number" id="agendamentoId" placeholder="Agendamento ID" class="input">
-                <button id="btnCancelar" class="btn btn-danger">Cancelar</button>
-            </div>
-            <div id="resultadoCancelar" class="card-list"></div>
-        </div>
-
-        <div class="card">
-            <h2 class="card-title">6. Listar Agendamentos</h2>
-            <div class="mt-2">
-                <button id="btnListarAgendamentos" class="btn btn-primary">Listar Agendamentos</button>
-            </div>
-            <div id="agendamentos" class="card-list"></div>
-        </div>
-        </section>
+        </Section>
 
     </div>
 

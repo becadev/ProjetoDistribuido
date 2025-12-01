@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import requests
@@ -54,9 +54,34 @@ def listar_servicos():
     resp = requests.get(f"{REST_URL}/servicos/")
     return resp.json()
 
+@app.post("/servicos")
+async def criar_servico(request: Request):
+    data = await request.json()
+    resp = requests.post(f"{REST_URL}/servicos/", json=data)
+    return resp.json()
+
+@app.delete("/servicos/{servico_id}")
+def deletar_servico(servico_id: int):
+    resp = requests.delete(f"{REST_URL}/servicos/{servico_id}/")
+    return {"sucesso": resp.status_code == 204}
+
 @app.get("/clientes")
 def listar_clientes():
     resp = requests.get(f"{REST_URL}/clientes/")
+    return resp.json()
+
+@app.post("/register")
+async def register(request: Request):
+    data = await request.json()
+    resp = requests.post(f"{REST_URL}/register/", json=data)
+    return resp.json()
+
+@app.post("/login")
+async def login(request: Request):
+    data = await request.json()
+    resp = requests.post(f"{REST_URL}/login/", json=data)
+    return resp.json()
+    resp = requests.post(f"{REST_URL}/login/", json=data)
     return resp.json()
 
 

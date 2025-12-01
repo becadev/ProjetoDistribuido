@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Profissional - AgendeJá</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .header {
+            background: #6c757d;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #138496;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 400px;
+        }
+        textarea {
+            min-height: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dashboard Profissional</h1>
+        <div>
+            <span id="userName"></span>
+            <button class="btn-logout" onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2>Clientes Cadastrados</h2>
+            <button onclick="carregarClientes()" class="btn">Atualizar Lista</button>
+            <div id="clientes"></div>
+        </div>
+
+        <div class="section">
+            <h2>Meus Serviços</h2>
+            <button onclick="carregarServicosProfissional()" class="btn">Atualizar Lista</button>
+            <div id="servicos"></div>
+        </div>
+
+        <div class="section">
+            <h2>Cadastrar Novo Serviço</h2>
+            <form id="servicoForm">
+                <div class="form-group">
+                    <label>Nome do Serviço:</label>
+                    <input type="text" id="nome" required>
+                </div>
+                <div class="form-group">
+                    <label>Descrição:</label>
+                    <textarea id="descricao"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Duração (minutos):</label>
+                    <input type="number" id="duracao_min" required>
+                </div>
+                <div class="form-group">
+                    <label>Preço (R$):</label>
+                    <input type="number" step="0.01" id="preco" required>
+                </div>
+                <div class="form-group">
+                    <label>URL da Imagem:</label>
+                    <input type="url" id="imagem_url">
+                </div>
+                <button type="submit" class="btn">Cadastrar Serviço</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Todos os Agendamentos</h2>
+            <button onclick="listarAgendamentos()" class="btn">Atualizar</button>
+            <div id="agendamentos"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const user = checkAuth('profissional');
+        if (user) {
+            document.getElementById('userName').textContent = `Olá, ${user.nome}!`;
+            carregarClientes();
+            carregarServicosProfissional();
+            listarAgendamentos();
+        }
+        
+        document.getElementById('servicoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                nome: document.getElementById('nome').value,
+                descricao: document.getElementById('descricao').value,
+                duracao_min: parseInt(document.getElementById('duracao_min').value),
+                preco: parseFloat(document.getElementById('preco').value),
+                imagem_url: document.getElementById('imagem_url').value,
+                ativo: true
+            };
+
+            try {
+                const response = await fetch(`${API}/servicos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('Serviço cadastrado com sucesso!');
+                    document.getElementById('servicoForm').reset();
+                    carregarServicosProfissional();
+                } else {
+                    const errorText = await response.text();
+                    alert('Erro ao cadastrar serviço: ' + errorText);
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

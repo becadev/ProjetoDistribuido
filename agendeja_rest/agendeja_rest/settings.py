@@ -72,6 +72,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agendeja_rest.wsgi.application'
 
+AUTH_USER_MODEL = 'servicos.Usuario'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
