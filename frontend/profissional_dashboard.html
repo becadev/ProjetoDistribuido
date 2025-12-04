@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Dashboard Profissional - AgendeJá</title>
     <link rel="stylesheet" href="css/styles.css">
     <style>
@@ -73,9 +73,62 @@
         textarea {
             min-height: 80px;
         }
+
+        /* Container fixo dos toasts */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+            pointer-events: none; /* permite clicar em elementos abaixo */
+        }
+
+        /* Estilo do toast */
+        .toast {
+            pointer-events: auto; /* permite fechar se quiser adicionar botão */
+            background: #17a2b8;
+            color: white;
+            padding: 14px 18px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-size: 15px;
+            animation: slideIn 0.4s ease forwards, fadeOut 0.4s ease 4.6s forwards;
+            opacity: 0;
+            max-width: 320px;
+            word-break: break-word;
+        }
+
+        /* Animação de entrada */
+        @keyframes slideIn {
+            from {
+                transform: translateX(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Animação de saída */
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- notificao -->
+    <div id="toast-container"></div>
+
     <div class="header">
         <h1>Dashboard Profissional</h1>
         <div>
@@ -133,45 +186,99 @@
 
     <script src="app.js"></script>
     <script>
-        const user = checkAuth('profissional');
-        if (user) {
-            document.getElementById('userName').textContent = `Olá, ${user.nome}!`;
-            carregarClientes();
-            carregarServicosProfissional();
-            listarAgendamentos();
+        // Função para exibir toast
+        function showToast(message) {
+            const container = document.getElementById("toast-container");
+
+            const toast = document.createElement("div");
+            toast.classList.add("toast");
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            // Remove após 5 segundos
+            setTimeout(() => {
+                // animação de saída
+                toast.remove();
+            }, 6000);
         }
-        
-        document.getElementById('servicoForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const data = {
-                nome: document.getElementById('nome').value,
-                descricao: document.getElementById('descricao').value,
-                duracao_min: parseInt(document.getElementById('duracao_min').value),
-                preco: parseFloat(document.getElementById('preco').value),
-                imagem_url: document.getElementById('imagem_url').value,
-                ativo: true
-            };
 
-            try {
-                const response = await fetch(`${API}/servicos`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if (response.ok) {
-                    alert('Serviço cadastrado com sucesso!');
-                    document.getElementById('servicoForm').reset();
-                    carregarServicosProfissional();
-                } else {
-                    const errorText = await response.text();
-                    alert('Erro ao cadastrar serviço: ' + errorText);
-                }
-            } catch (error) {
-                alert('Erro de conexão: ' + error.message);
+        // DEBUG: checar autenticação (se existir)
+        try {
+            const user = checkAuth('profissional');
+            if (user) {
+                document.getElementById('userName').textContent = `Olá, ${user.nome}!`;
+                carregarClientes();
+                carregarServicosProfissional();
+                listarAgendamentos();
             }
-        });
+        } catch (err) {
+            console.warn('checkAuth ou scripts adicionais não encontrados.', err);
+        }
+
+        // definição do endereço do websocket
+        const wsUrl = "ws://localhost:8000/ws";
+        const ws = new WebSocket(wsUrl); // cria a conexão em tempo real com o servidor
+
+        ws.onopen = () => { // qaundo a conexão é aberta ele exibe a mensagem de conexão no console(só para termos esse retorno) e envia um ping para manter a conexão ativa
+            console.log("WebSocket conectado!", wsUrl);
+            try { ws.send("ping"); } catch (e) { console.warn('Erro ao enviar ping:', e); }
+        }; 
+        // observação do evento para exibir o toast no front
+        ws.onmessage = (event) => {
+            // mostra toast flutuante
+            showToast(event.data);
+
+            const box = document.getElementById("notificacoes");
+            const p = document.createElement("p");
+            p.textContent = event.data;
+            box.appendChild(p);
+        };
+
+        ws.onerror = (err) => {
+            console.error("WebSocket erro:", err);
+        };
+
+        ws.onclose = (ev) => {
+            console.log("WebSocket fechado:", ev.code, ev.reason);
+        };
+
+        // Form submit (se existir app.js, ele pode sobrescrever; mantive seu código)
+        try {
+            document.getElementById('servicoForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    nome: document.getElementById('nome').value,
+                    descricao: document.getElementById('descricao').value,
+                    duracao_min: parseInt(document.getElementById('duracao_min').value),
+                    preco: parseFloat(document.getElementById('preco').value),
+                    imagem_url: document.getElementById('imagem_url').value,
+                    ativo: true
+                };
+
+                try {
+                    const response = await fetch(`${API}/servicos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        alert('Serviço cadastrado com sucesso!');
+                        document.getElementById('servicoForm').reset();
+                        carregarServicosProfissional();
+                    } else {
+                        const errorText = await response.text();
+                        alert('Erro ao cadastrar serviço: ' + errorText);
+                    }
+                } catch (error) {
+                    alert('Erro de conexão: ' + error.message);
+                }
+            });
+        } catch(e) {
+            // app.js pode não estar presente em testes
+            console.warn('Form handler não registrado (app.js ausente?).', e);
+        }
     </script>
 </body>
 </html>

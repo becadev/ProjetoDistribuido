@@ -2,21 +2,21 @@ from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-from zeep import Client #interpreta automaticamente o WSDL
-#zeep é uma biblioteca Python para consumir serviços web SOAP. Ela facilita a comunicação com APIs SOAP,
-# permitindo que os desenvolvedores façam chamadas de serviço e manipulem respostas de forma simples
+import asyncio
+from starlette.concurrency import run_in_threadpool
+from zeep import Client
+
 app = FastAPI(title="API Gateway - AgendeJá")
 
 # ---------------------------------------------------------------------
-# CONFIGURAÇÕES DO SISTEMA
+# CONFIGURAÇÕES
 # ---------------------------------------------------------------------
-REST_URL = "http://localhost:5001"    # Django REST
+REST_URL = "http://localhost:5001"
 SOAP_WSDL = "http://localhost:8088/soap/agendamento?wsdl"
 
 soap_client = Client(SOAP_WSDL)
 
-# CORS (para frontend) CORS é uma regra de segurança dos navegadores 
-# que controla quais sites podem acessar uma API.
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,9 +26,7 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------
-# HATEOAS - Endpoint raiz do Gateway - 
-# HATEOAS é um padrão de APIs REST onde cada resposta indica 
-# os próximos caminhos possíveis da aplicação, através de links.
+# HATEOAS ROOT
 # ---------------------------------------------------------------------
 @app.get("/")
 def gateway_root():
@@ -42,12 +40,12 @@ def gateway_root():
             "disponibilidade": "/disponibilidade?data=YYYY-MM-DD",
             "cancelar": "/cancelar",
             "listarAgendamentos": "/listarAgendamentos",
-            #"websocket": "/ws",
+            "websocket": "/ws",
         }
     }
 
 # ---------------------------------------------------------------------
-# ROTAS REST (repasse para Django)
+# ROTAS REST (para Django)
 # ---------------------------------------------------------------------
 @app.get("/servicos")
 def listar_servicos():
@@ -81,9 +79,6 @@ async def login(request: Request):
     data = await request.json()
     resp = requests.post(f"{REST_URL}/login/", json=data)
     return resp.json()
-    resp = requests.post(f"{REST_URL}/login/", json=data)
-    return resp.json()
-
 
 # ---------------------------------------------------------------------
 # ROTAS SOAP (agendamentos)
@@ -94,21 +89,39 @@ def disponibilidade(data: str):
     return {"data": data, "horarios_disponiveis": resposta.split(",")}
 
 @app.post("/agendar")
-def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
-    resposta = soap_client.service.agendarServico(
-        clienteId, servicoId, data, horaInicio
+async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
+
+    # SOAP rodando em thread pois é bloqueante
+    resposta = await run_in_threadpool( #await run_in_threadpool(lambda: soap_client.service.agendarServico(...)) porque chamadas Zeep são bloqueantes (síncronas). Se rodássemos diretamente bloquearíamos o loop async.
+        lambda: soap_client.service.agendarServico(
+            clienteId, servicoId, data, horaInicio
+        )
     )
 
-    # Envia notificação WebSocket
-    # for ws in connected_websockets:
-    #     ws.send_text(f"Novo agendamento: {data} às {horaInicio}")
+    # após a resposta da api soap, ele dispara a notificação por meio do websocket
+    asyncio.create_task(
+        broadcast_message(
+            f"Novo agendamento: {data} às {horaInicio} (Serviço {servicoId}, Cliente {clienteId})"
+        )
+    )
 
     return {"mensagem": resposta}
+
 
 @app.delete("/cancelar")
-def cancelar(agendamentoId: int):
-    resposta = soap_client.service.cancelarAgendamento(agendamentoId)
+async def cancelar(agendamentoId: int):
+    resposta = await run_in_threadpool(
+        lambda: (soap_client.service.cancelarAgendamento(agendamentoId))
+    )
+    
+    asyncio.create_task(
+        broadcast_message(
+            f"O agendamento {agendamentoId} foi cancelado"
+        )
+    )
+
     return {"mensagem": resposta}
+
 
 @app.get("/listarAgendamentos")
 def listar_agendamentos():
@@ -117,19 +130,33 @@ def listar_agendamentos():
     agendamentos = json.loads(resposta)
     return {"agendamentos": agendamentos}
 
+
 # ---------------------------------------------------------------------
-# SERVIÇO WEBSOCKET (notificações)
+# SERVIÇO WEBSOCKET 
 # ---------------------------------------------------------------------
-# connected_websockets = []
+connected_websockets = set() # conjunto de conexoes, o uso do set evita duplicatas
 
-# @app.websocket("/ws")
-# async def websocket_endpoint(websocket: WebSocket):
-#     await websocket.accept()
-#     connected_websockets.append(websocket)
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_websockets.add(websocket) # aguarda todos os clientes conectados
 
-#     try:
-#         while True:
-#             await websocket.receive_text()
-#     except:
-#        connected_websockets.remove(websocket)
+    try:
+        while True: 
+            await websocket.receive_text()   # mantém a conexão aberta
+    except:
+        connected_websockets.remove(websocket) # se o cliente desconectar ou a internet cair, o servito remove a conexão para evitar comunicações mortas
 
+
+async def broadcast_message(message: str):
+    dead_ws = [] # onde serão guardados conexões quebradas que serão removidas
+
+    for ws in connected_websockets:
+        try:
+            await ws.send_text(message) # envia mensagem para todos clientes conectados
+        except:
+            dead_ws.append(ws)  # se essa conexão falhar ele entende que ela é uma conexão quebrada e então já a adiciona na lista que será deletada
+    # isso evita tentar enviar mensagens para conexões inexistentes.
+    # remover websockets quebrados
+    for ws in dead_ws:
+        connected_websockets.remove(ws)
