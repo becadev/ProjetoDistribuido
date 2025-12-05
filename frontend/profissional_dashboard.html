@@ -4,74 +4,168 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Dashboard Profissional - AgendeJá</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <style>
-        .header {
-            background: #6c757d;
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+            position: relative;
+            overflow: hidden;
             color: white;
-            padding: 20px;
+            padding: 32px 40px;
+            border-radius: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-        .btn-logout {
-            background: #dc3545;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        .section {
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3), 0 1px 3px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(255,255,255,0.2);
             margin-bottom: 40px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeInUp 0.6s ease-out;
         }
-        .card {
-            background: white;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s;
         }
-        .btn {
-            padding: 10px 20px;
-            background: #17a2b8;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
+        .dashboard-header:hover::before {
+            left: 100%;
         }
-        .btn:hover {
-            background: #138496;
+        .dashboard-header:hover {
+            box-shadow: 0 15px 50px rgba(139, 92, 246, 0.4), 0 5px 20px rgba(139, 92, 246, 0.2);
+            transform: translateY(-3px) scale(1.01);
         }
-        .btn-danger {
-            background: #dc3545;
+        .dashboard-header h1 {
+            margin: 0;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 1;
         }
-        .btn-danger:hover {
-            background: #c82333;
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
         }
+        .user-name {
+            font-size: 15px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(160, 88, 241, 0.3);
+            transition: all 0.3s ease;
+        }
+        .user-name:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .section {
+            margin-bottom: 48px;
+            animation: fadeInUp 0.6s ease-out backwards;
+            animation-delay: calc(var(--section-index, 0) * 0.1s);
+        }
+        .section-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 24px rgba(139, 92, 246, 0.08), 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(139, 92, 246, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .section-card:hover {
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15), 0 2px 8px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+        .section h2 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 24px;
+            color: #8b5cf6;
+            margin: 0 0 24px 0;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            padding-bottom: 12px;
+        }
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        .section:hover h2::after {
+            width: 100px;
+        }
+        
         .form-group {
-            margin: 10px 0;
+            margin: 20px 0;
         }
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            letter-spacing: 0.3px;
         }
-        .form-group input, .form-group textarea {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        .form-group input, 
+        .form-group select,
+        .form-group textarea {
             width: 100%;
-            max-width: 400px;
+            max-width: 100%;
+            transition: all 0.3s ease;
+        }
+        .form-group input:hover,
+        .form-group select:hover,
+        .form-group textarea:hover {
+            border-color: rgba(139, 92, 246, 0.3);
         }
         textarea {
-            min-height: 80px;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .result-container {
+            margin-top: 24px;
+            min-height: 40px;
         }
 
         /* Container fixo dos toasts */
@@ -83,25 +177,25 @@
             flex-direction: column;
             gap: 10px;
             z-index: 9999;
-            pointer-events: none; /* permite clicar em elementos abaixo */
+            pointer-events: none;
         }
 
         /* Estilo do toast */
         .toast {
-            pointer-events: auto; /* permite fechar se quiser adicionar botão */
-            background: #17a2b8;
+            pointer-events: auto;
+            background: linear-gradient(135deg, #8b5cf6 0%, #9b6dff 100%);
             color: white;
-            padding: 14px 18px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
             font-size: 15px;
+            font-weight: 600;
             animation: slideIn 0.4s ease forwards, fadeOut 0.4s ease 4.6s forwards;
             opacity: 0;
-            max-width: 320px;
+            max-width: 350px;
             word-break: break-word;
         }
 
-        /* Animação de entrada */
         @keyframes slideIn {
             from {
                 transform: translateX(50px);
@@ -113,7 +207,6 @@
             }
         }
 
-        /* Animação de saída */
         @keyframes fadeOut {
             from {
                 opacity: 1;
@@ -123,63 +216,81 @@
                 transform: translateX(50px);
             }
         }
+
+        @media(max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            .dashboard-header h1 {
+                font-size: 22px;
+            }
+            #toast-container {
+                left: 10px;
+                right: 10px;
+            }
+            .toast {
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- notificao -->
+    <!-- notificacao -->
     <div id="toast-container"></div>
 
-    <div class="header">
-        <h1>Dashboard Profissional</h1>
-        <div>
-            <span id="userName"></span>
-            <button class="btn-logout" onclick="logout()">Sair</button>
-        </div>
-    </div>
-
     <div class="container">
+        <div class="dashboard-header">
+            <h1>Dashboard Profissional</h1>
+            <div class="header-right">
+                <span class="user-name" id="userName"></span>
+                <button class="btn btn-danger" onclick="logout()">Sair</button>
+            </div>
+        </div>
+
         <div class="section">
-            <h2>Clientes Cadastrados</h2>
-            <button onclick="carregarClientes()" class="btn">Atualizar Lista</button>
+            <h2>Clientes Csdastrados</h2>
+            <button onclick="carregarClientes()" class="btn btn-primary">Atualizar Lista</button>
             <div id="clientes"></div>
         </div>
 
         <div class="section">
-            <h2>Meus Serviços</h2>
-            <button onclick="carregarServicosProfissional()" class="btn">Atualizar Lista</button>
+            <h2> Meus Serviços</h2>
+            <button onclick="carregarServicosProfissional()" class="btn btn-primary">Atualizar Lista</button>
             <div id="servicos"></div>
         </div>
 
         <div class="section">
-            <h2>Cadastrar Novo Serviço</h2>
+            <h2> Cadastrar Novo Serviço</h2>
             <form id="servicoForm">
                 <div class="form-group">
                     <label>Nome do Serviço:</label>
-                    <input type="text" id="nome" required>
+                    <input type="text" id="nome" required class="input">
                 </div>
                 <div class="form-group">
                     <label>Descrição:</label>
-                    <textarea id="descricao"></textarea>
+                    <textarea id="descricao" class="input"></textarea>
                 </div>
                 <div class="form-group">
                     <label>Duração (minutos):</label>
-                    <input type="number" id="duracao_min" required>
+                    <input type="number" id="duracao_min" required class="input">
                 </div>
                 <div class="form-group">
                     <label>Preço (R$):</label>
-                    <input type="number" step="0.01" id="preco" required>
+                    <input type="number" step="0.01" id="preco" required class="input">
                 </div>
                 <div class="form-group">
                     <label>URL da Imagem:</label>
-                    <input type="url" id="imagem_url">
+                    <input type="url" id="imagem_url" class="input">
                 </div>
-                <button type="submit" class="btn">Cadastrar Serviço</button>
+                <button type="submit" class="btn btn-primary">Cadastrar Serviço</button>
             </form>
         </div>
 
         <div class="section">
-            <h2>Todos os Agendamentos</h2>
-            <button onclick="listarAgendamentos()" class="btn">Atualizar</button>
+            <h2> Todos os Agendamentos</h2>
+            <button onclick="listarAgendamentos()" class="btn btn-success">Atualizar</button>
             <div id="agendamentos"></div>
         </div>
     </div>
