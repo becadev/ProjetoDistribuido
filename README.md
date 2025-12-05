@@ -150,10 +150,21 @@ ws.onclose = () => {
 
 ### Rode em outro terminal:
 
+```bash
 cd frontend
 python -m http.server 5500
+```
 
-frontend/index.html
+### Acessar no navegador:
+
+http://localhost:5500/index.html
+
+**Páginas disponíveis:**
+- `index.html` - Página inicial (landing page)
+- `login.html` - Login de usuários
+- `register.html` - Cadastro de Cliente ou Profissional
+- `cliente_dashboard.html` - Dashboard do Cliente
+- `profissional_dashboard.html` - Dashboard do Profissional
 
 ---
 
