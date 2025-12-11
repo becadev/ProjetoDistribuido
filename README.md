@@ -134,7 +134,8 @@ javac -cp "../lib/*" com/agendeja/soap/*.java
 
 ### Rodar:
 
-java -cp "../lib/*;." com.agendeja.soap.Server
+java -cp "../lib/*;." com.agendeja.soap.Server (windows)
+java -cp "../lib/*:." com.agendeja.soap.Server (linux)
 
 ### Acessar WSDL:
 
