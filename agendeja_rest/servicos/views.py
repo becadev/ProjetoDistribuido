@@ -8,6 +8,13 @@ from .serializers import ServicoSerializer, ClienteSerializer, ProfissionalSeria
 class ServicoViewSet(viewsets.ModelViewSet):
     queryset = Servico.objects.all()
     serializer_class = ServicoSerializer
+    
+    def get_queryset(self):
+        queryset = Servico.objects.all()
+        profissional_id = self.request.query_params.get('profissional', None)
+        if profissional_id is not None:
+            queryset = queryset.filter(profissional_id=profissional_id)
+        return queryset
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()

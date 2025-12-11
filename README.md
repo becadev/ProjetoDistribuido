@@ -90,7 +90,7 @@ Utilizado aqui para:
 
 ## 🚀 Instalação
 
-py -3.11 -m venv venv
+python -m venv venv
 
 venv\Scripts\activate
 
@@ -163,24 +163,6 @@ http://localhost:8000/docs
 ### WebSocket:
 
 ws://localhost:8000/ws
-
-**Exemplo de uso no JavaScript:**
-```javascript
-const ws = new WebSocket('ws://localhost:8000/ws');
-
-ws.onopen = () => {
-    console.log('Conectado ao WebSocket');
-};
-
-ws.onmessage = (event) => {
-    console.log('Notificação recebida:', event.data);
-    // Atualizar UI com nova notificação
-};
-
-ws.onclose = () => {
-    console.log('Desconectado do WebSocket');
-};
-```
 
 ---
 

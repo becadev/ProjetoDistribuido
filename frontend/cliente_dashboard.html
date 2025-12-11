@@ -2,8 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Cliente - AgendeJá</title>
+    <meta name="viewport"            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15), 0 2px 8px rgba(0,0,0,0.08);
+            transform: translateY(-4px);
+            border-color: rgba(245, 158, 11, 0.2);ntent="width=device-width, initial-scale=1.0">
+    <title>Dashboard Cliente - Agende Já</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +22,7 @@
         }
 
         .dashboard-header {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%);
             position: relative;
             overflow: hidden;
             color: white;
@@ -29,7 +31,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3), 0 1px 3px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(255,255,255,0.2);
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3), 0 1px 3px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(255,255,255,0.2);
             margin-bottom: 40px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             animation: fadeInUp 0.6s ease-out;
@@ -48,7 +50,7 @@
             left: 100%;
         }
         .dashboard-header:hover {
-            box-shadow: 0 15px 50px rgba(139, 92, 246, 0.4), 0 5px 20px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 15px 50px rgba(245, 158, 11, 0.4), 0 5px 20px rgba(245, 158, 11, 0.2);
             transform: translateY(-3px) scale(1.01);
         }
         .dashboard-header h1 {
@@ -92,8 +94,8 @@
             backdrop-filter: blur(20px);
             border-radius: 16px;
             padding: 28px;
-            box-shadow: 0 4px 24px rgba(139, 92, 246, 0.08), 0 1px 3px rgba(0,0,0,0.05);
-            border: 1px solid rgba(139, 92, 246, 0.1);
+            box-shadow: 0 4px 24px rgba(245, 158, 11, 0.08), 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(245, 158, 11, 0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .section-card:hover {
@@ -104,7 +106,7 @@
         .section h2 {
             font-family: 'Quicksand', sans-serif;
             font-size: 24px;
-            color: #8b5cf6;
+            color: #f59e0b;
             margin: 0 0 24px 0;
             font-weight: 700;
             display: flex;
@@ -120,7 +122,7 @@
             left: 0;
             width: 60px;
             height: 3px;
-            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -147,7 +149,7 @@
         }
         .form-group input:hover,
         .form-group select:hover {
-            border-color: rgba(139, 92, 246, 0.3);
+            border-color: rgba(245, 158, 11, 0.3);
         }
 
         .action-buttons {
@@ -216,6 +218,11 @@
             <div class="section-card">
                 <h2>Consultar Disponibilidade</h2>
                 <div class="form-group">
+                    <label>Selecione o Serviço:</label>
+                    <select id="servicoId" class="input"></select>
+                </div>
+
+                <div class="form-group">
                     <label>Selecione a Data:</label>
                     <input type="date" id="data" class="input">
                 </div>
@@ -230,17 +237,20 @@
             <div class="section-card">
                 <h2>Agendar Serviço</h2>
                 <div class="form-group">
-                    <label>Serviço:</label>
-                    <select id="servicoId" class="input"></select>
+                    <label>Selecione o Serviço:</label>
+                    <select id="servicoIdAgendamento" class="input"></select>
                 </div>
+
                 <div class="form-group">
                     <label>Data:</label>
                     <input type="date" id="dataAgendamento" class="input">
                 </div>
+
                 <div class="form-group">
                     <label>Horário (HH:MM):</label>
                     <input type="text" id="hora" placeholder="Ex: 14:30" class="input">
                 </div>
+
                 <div class="action-buttons">
                     <button onclick="agendar()" class="btn btn-primary">Confirmar Agendamento</button>
                 </div>
@@ -271,45 +281,39 @@
         </div>
     </div>
 
-        <div class="section">
-            <h2> Agendar Serviço</h2>
-            <div class="form-group">
-                <label>Serviço:</label>
-                <select id="servicoId" class="input"></select>
-            </div>
-            <div class="form-group">
-                <label>Data:</label>
-                <input type="date" id="dataAgendamento" class="input">
-            </div>
-            <div class="form-group">
-                <label>Hora (HH:MM):</label>
-                <input type="text" id="hora" placeholder="13:00" class="input">
-            </div>
-            <button onclick="agendar()" class="btn btn-primary">Agendar</button>
-        </div>
-
-        <div class="section">
-            <h2>Meus Agendamentos</h2>
-            <button onclick="listarAgendamentos()" class="btn btn-success">Atualizar</button>
-            <div id="agendamentos"></div>
-        </div>
-
-        <div class="section">
-            <h2> Cancelar Agendamento</h2>
-            <div class="form-group">
-                <label>ID do Agendamento:</label>
-                <input type="number" id="agendamentoId" placeholder="ID" class="input">
-                <button onclick="cancelar()" class="btn btn-danger" style="margin-top: 12px;">Cancelar Agendamento</button>
-            </div>
-        </div>
-    </div>
-
     <script src="app.js"></script>
     <script>
+        // Função para carregar serviços apenas no select (sem container)
+        async function carregarServicosParaSelect(selectId) {
+            try {
+                const r = await fetch(`${API}/servicos`);
+                if (!r.ok) throw new Error(`Falha ao carregar serviços: ${r.status}`);
+                const data = await r.json();
+                
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                select.innerHTML = "<option value=''>Selecione um serviço...</option>";
+                
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(s => {
+                        select.innerHTML += `<option value="${s.id}">${s.nome} - R$ ${s.preco} - ${s.duracao_min}min</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar serviços para select:', error);
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = "<option value=''>Erro ao carregar serviços</option>";
+                }
+            }
+        }
+
         const user = checkAuth('cliente');
         if (user) {
             document.getElementById('userName').textContent = `Olá, ${user.nome}!`;
-            carregarServicos();
+            carregarServicos(); // Para a seção de visualização
+            carregarServicosParaSelect('servicoIdAgendamento'); // Para o select de agendamento
             listarAgendamentos();
         }
     </script>

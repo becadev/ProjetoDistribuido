@@ -2,8 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Dashboard Profissional - AgendeJá</title>
+    <meta name="viewpor            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15), 0 2px 8px rgba(0,0,0,0.08);
+            transform: translateY(-4px);
+            border-color: rgba(245, 158, 11, 0.2);content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard Profissional - Agende Já</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +22,7 @@
         }
 
         .dashboard-header {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%);
             position: relative;
             overflow: hidden;
             color: white;
@@ -29,7 +31,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3), 0 1px 3px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(255,255,255,0.2);
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3), 0 1px 3px rgba(0,0,0,0.1), inset 0 -2px 0 rgba(255,255,255,0.2);
             margin-bottom: 40px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             animation: fadeInUp 0.6s ease-out;
@@ -48,7 +50,7 @@
             left: 100%;
         }
         .dashboard-header:hover {
-            box-shadow: 0 15px 50px rgba(139, 92, 246, 0.4), 0 5px 20px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 15px 50px rgba(245, 158, 11, 0.4), 0 5px 20px rgba(245, 158, 11, 0.2);
             transform: translateY(-3px) scale(1.01);
         }
         .dashboard-header h1 {
@@ -92,8 +94,8 @@
             backdrop-filter: blur(20px);
             border-radius: 16px;
             padding: 28px;
-            box-shadow: 0 4px 24px rgba(139, 92, 246, 0.08), 0 1px 3px rgba(0,0,0,0.05);
-            border: 1px solid rgba(139, 92, 246, 0.1);
+            box-shadow: 0 4px 24px rgba(245, 158, 11, 0.08), 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(245, 158, 11, 0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .section-card:hover {
@@ -104,7 +106,7 @@
         .section h2 {
             font-family: 'Quicksand', sans-serif;
             font-size: 24px;
-            color: #8b5cf6;
+            color: #f59e0b;
             margin: 0 0 24px 0;
             font-weight: 700;
             display: flex;
@@ -120,7 +122,7 @@
             left: 0;
             width: 60px;
             height: 3px;
-            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -149,7 +151,7 @@
         .form-group input:hover,
         .form-group select:hover,
         .form-group textarea:hover {
-            border-color: rgba(139, 92, 246, 0.3);
+            border-color: rgba(245, 158, 11, 0.3);
         }
         textarea {
             min-height: 100px;
@@ -183,11 +185,11 @@
         /* Estilo do toast */
         .toast {
             pointer-events: auto;
-            background: linear-gradient(135deg, #8b5cf6 0%, #9b6dff 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
             color: white;
             padding: 16px 20px;
             border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
             font-size: 15px;
             font-weight: 600;
             animation: slideIn 0.4s ease forwards, fadeOut 0.4s ease 4.6s forwards;
@@ -354,17 +356,24 @@
             console.log("WebSocket fechado:", ev.code, ev.reason);
         };
 
-        // Form submit (se existir app.js, ele pode sobrescrever; mantive seu código)
         try {
             document.getElementById('servicoForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                
+                const user = checkAuth('profissional');
+                if (!user) {
+                    alert('Erro: usuário não autenticado');
+                    return;
+                }
+                
                 const data = {
                     nome: document.getElementById('nome').value,
                     descricao: document.getElementById('descricao').value,
                     duracao_min: parseInt(document.getElementById('duracao_min').value),
                     preco: parseFloat(document.getElementById('preco').value),
                     imagem_url: document.getElementById('imagem_url').value,
-                    ativo: true
+                    ativo: true,
+                    profissional_id: user.profile_id
                 };
 
                 try {

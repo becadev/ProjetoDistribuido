@@ -61,7 +61,7 @@ async function carregarServicos(containerId = 'servicos', selectId = 'servicoId'
         
         data.forEach(s => {
             div.innerHTML += `<div class="card">
-                <strong>${s.nome}</strong> - R$ ${s.preco} - ${s.duracao_min} min<br>
+                <strong>${s.nome} - Profissional ${s.profissional_nome || 'Desconhecido'}</strong> - R$ ${s.preco} - ${s.duracao_min} min<br>
                 ${s.descricao || ''}
             </div>`;
             if (select) {
@@ -76,14 +76,27 @@ async function carregarServicos(containerId = 'servicos', selectId = 'servicoId'
 
 async function carregarServicosProfissional() {
     try {
-        const r = await fetch(`${API}/servicos`);
-        if (!r.ok) throw new Error('Falha ao carregar');
+        const user = getUser();
+        if (!user || !user.profile_id) {
+            throw new Error('Usuário não encontrado');
+        }
+
+        // Usar a rota correta que espera profissional_id como parâmetro
+        const r = await fetch(`${API}/servicos/${user.profile_id}`);
+        if (!r.ok) {
+            console.error('Erro na requisição:', r.status, r.statusText);
+            throw new Error(`Falha ao carregar serviços: ${r.status}`);
+        }
+        
         const data = await r.json();
+        console.log('Dados recebidos:', data); // Debug
         
         const div = document.getElementById('servicos');
+        if (!div) return; // Se não existe o elemento, sair silenciosamente
+        
         div.innerHTML = '';
         
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             div.innerHTML = "<p>Nenhum serviço cadastrado.</p>";
         } else {
             data.forEach(s => {
@@ -95,7 +108,11 @@ async function carregarServicosProfissional() {
             });
         }
     } catch (err) {
-        alert('Erro ao carregar serviços');
+        console.error('Erro ao carregar serviços:', err);
+        const div = document.getElementById('servicos');
+        if (div) {
+            div.innerHTML = `<p>Erro ao carregar serviços: ${err.message}</p>`;
+        }
     }
 }
 
@@ -144,6 +161,11 @@ async function carregarClientes() {
 // ===== DISPONIBILIDADE =====
 async function consultarDisponibilidade() {
     const container = 'disponibilidade';
+    const servicoId = document.getElementById('servicoId').value;
+    if (!servicoId) {
+        showMessage(container, 'Escolha um serviço.', 'error');
+        return;
+    }
     const dataVal = document.getElementById('data').value;
     if (!dataVal) {
         showMessage(container, 'Escolha uma data.', 'error');
@@ -152,7 +174,7 @@ async function consultarDisponibilidade() {
     
     showMessage(container, 'Consultando...', 'loading');
     try {
-        const r = await fetch(`${API}/disponibilidade?data=${encodeURIComponent(dataVal)}`);
+        const r = await fetch(`${API}/disponibilidade?data=${encodeURIComponent(dataVal)}&servico_id=${servicoId}`);
         if (!r.ok) throw new Error(`Falha: ${r.status}`);
         const json = await r.json();
         
@@ -172,7 +194,7 @@ async function agendar() {
     if (!user) return;
     
     const clienteId = user.profile_id;
-    const servicoId = document.getElementById('servicoId').value;
+    const servicoId = document.getElementById('servicoIdAgendamento').value;
     const dataAg = document.getElementById('dataAgendamento').value;
     const hora = document.getElementById('hora').value;
 
@@ -240,6 +262,11 @@ async function listarAgendamentos() {
         // Se for cliente, filtrar apenas os seus
         if (user && user.role === 'cliente') {
             agendamentos = agendamentos.filter(a => a.cliente_id == user.profile_id);
+        }
+        
+        if (user && user.role === 'profissional') {
+            // Filtrar agendamentos dos serviços do profissional
+            agendamentos = agendamentos.filter(a => a.profissional_id == user.profile_id);
         }
         
         if (agendamentos.length === 0) {

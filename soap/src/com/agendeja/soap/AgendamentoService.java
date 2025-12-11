@@ -8,7 +8,7 @@ import javax.jws.WebService;
 public interface AgendamentoService {
 
     @WebMethod
-    String consultarDisponibilidade(String data);
+    String consultarDisponibilidade(String data, int servicoId);
 
     @WebMethod
     String agendarServico(int clienteId, int servicoId, String data, String horaInicio);

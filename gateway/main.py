@@ -55,7 +55,7 @@ def enviar_mensagem_mq(evento, dados):
 # ---------------------------------------------------------------------
 # HATEOAS ROOT
 # ---------------------------------------------------------------------
-@app.get("/")
+@app.get("/", tags=["Gateway"])
 def gateway_root():
     return {
         "message": "API Gateway funcionando",
@@ -64,7 +64,7 @@ def gateway_root():
             "servicos": "/servicos",
             "clientes": "/clientes",
             "agendar": "/agendar",
-            "disponibilidade": "/disponibilidade?data=YYYY-MM-DD",
+            "disponibilidade": "/disponibilidade?data=YYYY-MM-DD&servico_id=ID",
             "cancelar": "/cancelar",
             "listarAgendamentos": "/listarAgendamentos",
             "websocket": "/ws",
@@ -74,34 +74,39 @@ def gateway_root():
 # ---------------------------------------------------------------------
 # ROTAS REST (para Django)
 # ---------------------------------------------------------------------
-@app.get("/servicos")
+@app.get("/servicos", tags=["Serviços"])
 def listar_servicos():
     resp = requests.get(f"{REST_URL}/servicos/")
     return resp.json()
 
-@app.post("/servicos")
+@app.get("/servicos/{profissional_id}", tags=["Serviços"])
+def listar_servicos_profissional(profissional_id: int):
+    resp = requests.get(f"{REST_URL}/servicos/?profissional={profissional_id}")
+    return resp.json()
+
+@app.post("/servicos", tags=["Serviços"])
 async def criar_servico(request: Request):
     data = await request.json()
     resp = requests.post(f"{REST_URL}/servicos/", json=data)
     return resp.json()
 
-@app.delete("/servicos/{servico_id}")
+@app.delete("/servicos/{servico_id}", tags=["Serviços"])
 def deletar_servico(servico_id: int):
     resp = requests.delete(f"{REST_URL}/servicos/{servico_id}/")
     return {"sucesso": resp.status_code == 204}
 
-@app.get("/clientes")
+@app.get("/clientes", tags=["Clientes"])
 def listar_clientes():
     resp = requests.get(f"{REST_URL}/clientes/")
     return resp.json()
 
-@app.post("/register")
+@app.post("/register", tags=["Usuários"])
 async def register(request: Request):
     data = await request.json()
     resp = requests.post(f"{REST_URL}/register/", json=data)
     return resp.json()
 
-@app.post("/login")
+@app.post("/login", tags=["Usuários"])
 async def login(request: Request):
     data = await request.json()
     resp = requests.post(f"{REST_URL}/login/", json=data)
@@ -110,12 +115,12 @@ async def login(request: Request):
 # ---------------------------------------------------------------------
 # ROTAS SOAP (agendamentos)
 # ---------------------------------------------------------------------
-@app.get("/disponibilidade")
-def disponibilidade(data: str):
-    resposta = soap_client.service.consultarDisponibilidade(data)
-    return {"data": data, "horarios_disponiveis": resposta.split(",")}
+@app.get("/disponibilidade", tags=["Agendamentos"])
+def disponibilidade(data: str, servico_id: int):
+    resposta = soap_client.service.consultarDisponibilidade(data, servico_id)
+    return {"data": data, "servico_id": servico_id, "horarios_disponiveis": resposta.split(",") if resposta and not resposta.startswith("Erro") else []}
 
-@app.post("/agendar")
+@app.post("/agendar", tags=["Agendamentos"])
 async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
 
     # SOAP rodando em thread pois é bloqueante
@@ -148,7 +153,7 @@ async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
     return {"mensagem": resposta}
 
 
-@app.delete("/cancelar")
+@app.delete("/cancelar", tags=["Agendamentos"])
 async def cancelar(agendamentoId: int):
     resposta = await run_in_threadpool(
         lambda: (soap_client.service.cancelarAgendamento(agendamentoId))
@@ -172,7 +177,7 @@ async def cancelar(agendamentoId: int):
     return {"mensagem": resposta}
 
 
-@app.get("/listarAgendamentos")
+@app.get("/listarAgendamentos", tags=["Agendamentos"])
 def listar_agendamentos():
     resposta = soap_client.service.listarAgendamentos()
     import json

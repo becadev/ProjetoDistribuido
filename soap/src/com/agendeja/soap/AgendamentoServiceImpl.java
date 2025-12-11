@@ -9,30 +9,44 @@ import java.time.LocalTime;
 public class AgendamentoServiceImpl implements AgendamentoService {
 
     @Override
-    public String consultarDisponibilidade(String data) {
+    public String consultarDisponibilidade(String data, int servicoId) {
         StringBuilder disponiveis = new StringBuilder();
 
         String[] horarios = {"13:00", "14:00", "15:00", "16:00", "17:00"};
 
         try (Connection conn = Database.connect()) {
+            // Primeiro, buscar a duração do serviço específico
+            PreparedStatement psServico = conn.prepareStatement(
+                "SELECT duracao_min FROM servicos_servico WHERE id=?"
+            );
+            psServico.setInt(1, servicoId);
+            ResultSet rsServico = psServico.executeQuery();
+            
+            if (!rsServico.next()) {
+                return "Erro: Serviço não encontrado";
+            }
+            
+            int duracaoServico = rsServico.getInt("duracao_min");
+
             for (String h : horarios) {
                 LocalTime horarioConsulta = LocalTime.parse(h);
+                LocalTime fimConsulta = horarioConsulta.plusMinutes(duracaoServico);
                 boolean ocupado = false;
 
-                // Buscar TODOS os agendamentos confirmados do dia
+                // Buscar agendamentos confirmados do dia para qualquer serviço
                 PreparedStatement ps = conn.prepareStatement(
                         "SELECT hora_inicio, hora_fim FROM agendamento WHERE data=? AND status='Confirmado'"
                 );
                 ps.setString(1, data);
                 ResultSet rs = ps.executeQuery();
 
-                // Verificar se o horário está dentro de algum agendamento existente
+                // Verificar se o novo agendamento conflita com os existentes
                 while (rs.next()) {
                     LocalTime inicioOcupado = LocalTime.parse(rs.getString("hora_inicio"));
                     LocalTime fimOcupado = LocalTime.parse(rs.getString("hora_fim"));
 
-                    // Se o horário consultado está entre inicio e fim de um agendamento, está ocupado
-                    if (!horarioConsulta.isBefore(inicioOcupado) && horarioConsulta.isBefore(fimOcupado)) {
+                    // Verificar sobreposição: novo agendamento não pode sobrepor com existente
+                    if (horarioConsulta.isBefore(fimOcupado) && fimConsulta.isAfter(inicioOcupado)) {
                         ocupado = true;
                         break;
                     }
