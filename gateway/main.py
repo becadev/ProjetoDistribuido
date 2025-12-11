@@ -5,6 +5,8 @@ import requests
 import asyncio
 from starlette.concurrency import run_in_threadpool
 from zeep import Client
+import pika # biblioteca que implementa o protocolo AMQP para comunicação com RabbitMQ, serve como cliente para enviar mensagens para o broker.
+import json
 
 app = FastAPI(title="API Gateway - AgendeJá")
 
@@ -24,6 +26,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------
+# Mensageria com RabbitMQ (o gateway só vai publicar e não vai esperar mensagens e nem gerenciar filas)
+# ---------------------------------------------------------------------
+def enviar_mensagem_mq(evento, dados):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost')
+    ) # cria conexão com o RabbitMQ
+    channel = connection.channel() # cria um canal de comunicação
+
+    # garante que a fila existe
+    channel.queue_declare(queue='agendamentos')
+
+    payload = json.dumps({
+        "evento": evento,
+        "dados": dados
+    }) # cria o payload da mensagem em formato JSON
+
+    channel.basic_publish(
+        exchange='',
+        routing_key='agendamentos',
+        body=payload
+    ) # publica a mensagem na fila 'agendamentos'
+
+    connection.close()
 
 # ---------------------------------------------------------------------
 # HATEOAS ROOT
@@ -98,11 +125,24 @@ async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
         )
     )
 
+    # versão utilizando apenas websocket
     # após a resposta da api soap, ele dispara a notificação por meio do websocket
-    asyncio.create_task(
-        broadcast_message(
-            f"Novo agendamento: {data} às {horaInicio} (Serviço {servicoId}, Cliente {clienteId})"
-        )
+    # asyncio.create_task(
+    #     broadcast_message(
+    #         f"Novo agendamento: {data} às {horaInicio} (Serviço {servicoId}, Cliente {clienteId})"
+    #     )
+    # )
+
+    #versão utilizando mensageria + websocket
+    # chama a função que envia a mensagem para o RabbitMQ com os dados do novo agendamento
+    enviar_mensagem_mq(
+        "novo_agendamento", #evento
+        { #dados
+            "clienteId": clienteId,
+            "servicoId": servicoId,
+            "data": data,
+            "horaInicio": horaInicio
+        }
     )
 
     return {"mensagem": resposta}
@@ -114,10 +154,19 @@ async def cancelar(agendamentoId: int):
         lambda: (soap_client.service.cancelarAgendamento(agendamentoId))
     )
     
-    asyncio.create_task(
-        broadcast_message(
-            f"O agendamento {agendamentoId} foi cancelado"
-        )
+    # versão utilizando apenas websocket
+    # asyncio.create_task(
+    #     broadcast_message(
+    #         f"O agendamento {agendamentoId} foi cancelado"
+    #     )
+    # )
+
+    # versão utilizando mensageria + websocket
+    enviar_mensagem_mq(
+        "agendamento_cancelado",
+        {
+            "agendamentoId": agendamentoId
+        }
     )
 
     return {"mensagem": resposta}
