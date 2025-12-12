@@ -2,17 +2,27 @@ import pika
 import json
 import asyncio
 import websockets
+import threading
 
 async def enviar_ws(msg):
     try:
-        async with websockets.connect("ws://localhost:8000/ws") as ws: # conecta ao servidor websocket
+        async with websockets.connect("ws://localhost:8000/ws") as ws:
             print("Consumer conectado ao gateway")
-            await ws.send(msg) #envia mensagem
+            await ws.send(msg)
             print("Consumer enviou:", msg)
     except Exception as e:
         print("Erro ao enviar:", e)
 
-def callback(ch, method, properties, body): #transforma o payload em string e usa o async pra abrir conexão com ws e enviar a mensagem
+def executar_async(msg):
+    """Executa a função assíncrona em uma nova thread com seu próprio loop de eventos"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(enviar_ws(msg))
+    finally:
+        loop.close()
+
+def callback(ch, method, properties, body):
     dados = json.loads(body)
     print("Mensagem recebida do RabbitMQ:", dados)
 
@@ -24,10 +34,11 @@ def callback(ch, method, properties, body): #transforma o payload em string e us
     else:
         msg = f"Agendamento cancelado: {payload}"
 
-    asyncio.get_event_loop().create_task(enviar_ws(msg)) # agenda a execução da função assíncrona sem bloquear o loop, permitindo o servidor continuar atendendo requisições
+    # Executa a função assíncrona em uma thread separada
+    thread = threading.Thread(target=executar_async, args=(msg,))
+    thread.start()
 
-
-def main(): #conecta ao RabbitMQ e consome a fila de agendamentos
+def main():
     connection = pika.BlockingConnection(
         pika.ConnectionParameters('localhost')
     )
@@ -37,7 +48,7 @@ def main(): #conecta ao RabbitMQ e consome a fila de agendamentos
 
     channel.basic_consume(
         queue='agendamentos',
-        on_message_callback=callback, #chama callback pra cada mensagem 
+        on_message_callback=callback,
         auto_ack=True
     )
 
