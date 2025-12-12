@@ -341,33 +341,20 @@
 
         // definição do endereço do websocket
         const wsUrl = "ws://localhost:8000/ws";
-        const ws = new WebSocket(wsUrl); // cria a conexão em tempo real com o servidor
+        const ws = new WebSocket(wsUrl);
 
-        ws.onopen = () => { // qaundo a conexão é aberta ele exibe a mensagem de conexão no console(só para termos esse retorno) e envia um ping para manter a conexão ativa
-            console.log("WebSocket conectado!", wsUrl);
-            try { ws.send("ping"); } catch (e) { console.warn('Erro ao enviar ping:', e); }
+        ws.onopen = () => {
+            console.log("WebSocket conectado!");
+            ws.send("ping");
         }; 
-        // observação do evento para exibir o toast no front
+        
         ws.onmessage = (event) => {
-                console.log("Dados recebidos:", event.data);
-                
-                let dados;
-                try {
-                    dados = JSON.parse(event.data);
-                    console.log("DATA JSON:", dados);
-                } catch (err) {
-                    console.warn("Mensagem não é JSON. Exibindo texto cru:", event.data);
-                    showToast(event.data);
-                    return;
-                }
-
-                const msg = Array.isArray(dados)
-                    ? dados[0].mensagem
-                    : dados.mensagem;
-
-                console.log("MSG", msg);
-                showToast(String(msg));
-            };
+            // Ignora mensagem de pong
+            if (event.data === "pong") return;
+            
+            // Exibe qualquer mensagem que não seja pong
+            showToast(event.data);
+        };
 
 
 
