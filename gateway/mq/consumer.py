@@ -4,8 +4,13 @@ import asyncio
 import websockets
 
 async def enviar_ws(msg):
-    async with websockets.connect("ws://localhost:8000/ws") as ws: # conecta ao servidor websocket
-        await ws.send(msg) # envia a mensagem
+    try:
+        async with websockets.connect("ws://localhost:8000/ws") as ws: # conecta ao servidor websocket
+            print("Consumer conectado ao gateway")
+            await ws.send(msg) #envia mensagem
+            print("Consumer enviou:", msg)
+    except Exception as e:
+        print("Erro ao enviar:", e)
 
 def callback(ch, method, properties, body): #transforma o payload em string e usa o async pra abrir conexão com ws e enviar a mensagem
     dados = json.loads(body)
@@ -19,7 +24,8 @@ def callback(ch, method, properties, body): #transforma o payload em string e us
     else:
         msg = f"Agendamento cancelado: {payload}"
 
-    asyncio.run(enviar_ws(msg))
+    asyncio.get_event_loop().create_task(enviar_ws(msg)) # agenda a execução da função assíncrona sem bloquear o loop, permitindo o servidor continuar atendendo requisições
+
 
 def main(): #conecta ao RabbitMQ e consome a fila de agendamentos
     connection = pika.BlockingConnection(

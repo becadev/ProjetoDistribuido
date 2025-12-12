@@ -189,28 +189,24 @@ def listar_agendamentos():
 # SERVIÇO WEBSOCKET 
 # ---------------------------------------------------------------------
 connected_websockets = set() # conjunto de conexoes, o uso do set evita duplicatas
+connected_clients = []  # lista simples de conexões
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    connected_websockets.add(websocket) # aguarda todos os clientes conectados
+    connected_clients.append(websocket)   # registra cliente
 
     try:
-        while True: 
-            await websocket.receive_text()   # mantém a conexão aberta
-    except:
-        connected_websockets.remove(websocket) # se o cliente desconectar ou a internet cair, o servito remove a conexão para evitar comunicações mortas
+        while True:
+            msg = await websocket.receive_text() #  recebe mensagem do cliente
+            await broadcast_message(msg) # envia para todos os clientes
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket) # remove cliente desconectado
 
 
-async def broadcast_message(message: str):
-    dead_ws = [] # onde serão guardados conexões quebradas que serão removidas
-
-    for ws in connected_websockets:
+async def broadcast_message(msg: str):
+    for ws in connected_clients:
         try:
-            await ws.send_text(message) # envia mensagem para todos clientes conectados
-        except:
-            dead_ws.append(ws)  # se essa conexão falhar ele entende que ela é uma conexão quebrada e então já a adiciona na lista que será deletada
-    # isso evita tentar enviar mensagens para conexões inexistentes.
-    # remover websockets quebrados
-    for ws in dead_ws:
-        connected_websockets.remove(ws)
+            await ws.send_text(msg)      # envia mensagem
+        except Exception:
+            connected_clients.remove(ws)  # limpa conexões mortas

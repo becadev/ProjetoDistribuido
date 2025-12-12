@@ -89,7 +89,7 @@ async function carregarServicosProfissional() {
         }
         
         const data = await r.json();
-        console.log('Dados recebidos:', data); // Debug
+        // console.log('Dados recebidos:', data); // Debug
         
         const div = document.getElementById('servicos');
         if (!div) return; // Se não existe o elemento, sair silenciosamente

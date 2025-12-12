@@ -2,9 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewpor            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15), 0 2px 8px rgba(0,0,0,0.08);
-            transform: translateY(-4px);
-            border-color: rgba(245, 158, 11, 0.2);content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Dashboard Profissional - Agende Já</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -178,7 +177,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            z-index: 9999;
+             z-index: 999999999;
             pointer-events: none;
         }
 
@@ -241,6 +240,8 @@
 <body>
     <!-- notificacao -->
     <div id="toast-container"></div>
+    <!-- <div id="notificacoes"></div> -->
+
 
     <div class="container">
         <div class="dashboard-header">
@@ -301,20 +302,29 @@
     <script>
         // Função para exibir toast
         function showToast(message) {
-            const container = document.getElementById("toast-container");
+    const container = document.getElementById("toast-container");
 
-            const toast = document.createElement("div");
-            toast.classList.add("toast");
-            toast.textContent = message;
+    const toast = document.createElement("div");
+    toast.classList.add("toast");
+    toast.textContent = message;
 
-            container.appendChild(toast);
+    // ANTES de inserir, removemos e reatribuímos animações
+    toast.style.animation = "none";
 
-            // Remove após 5 segundos
-            setTimeout(() => {
-                // animação de saída
-                toast.remove();
-            }, 6000);
-        }
+    container.appendChild(toast);
+
+    // força reflow para reiniciar animação
+    void toast.offsetWidth;
+
+    // aplica a animação novamente
+    toast.style.animation = "slideIn 0.4s ease forwards, fadeOut 0.4s ease 4.6s forwards";
+
+    // remove depois
+    setTimeout(() => {
+        toast.remove();
+    }, 6000);
+}
+
 
         // DEBUG: checar autenticação (se existir)
         try {
@@ -339,14 +349,27 @@
         }; 
         // observação do evento para exibir o toast no front
         ws.onmessage = (event) => {
-            // mostra toast flutuante
-            showToast(event.data);
+                console.log("Dados recebidos:", event.data);
+                
+                let dados;
+                try {
+                    dados = JSON.parse(event.data);
+                    console.log("DATA JSON:", dados);
+                } catch (err) {
+                    console.warn("Mensagem não é JSON. Exibindo texto cru:", event.data);
+                    showToast(event.data);
+                    return;
+                }
 
-            const box = document.getElementById("notificacoes");
-            const p = document.createElement("p");
-            p.textContent = event.data;
-            box.appendChild(p);
-        };
+                const msg = Array.isArray(dados)
+                    ? dados[0].mensagem
+                    : dados.mensagem;
+
+                console.log("MSG", msg);
+                showToast(String(msg));
+            };
+
+
 
         ws.onerror = (err) => {
             console.error("WebSocket erro:", err);
