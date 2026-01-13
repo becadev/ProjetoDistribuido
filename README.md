@@ -6,7 +6,7 @@ Este projeto implementa uma arquitetura distribuída contendo:
 - 🟧 **SOAP (Java JAX-WS)** → agendamentos  
 - 🟥 **API Gateway (FastAPI)** → unifica REST + SOAP + WS com HATEOAS  
 - 🟪 **Mensageria (RabbitMQ)** → comunicação assíncrona entre serviços
-- 🟫 **Socke TCP/UDP** → 
+- 🟫 **Socket TCP/UDP** → 
 
 # 📌 1. Conceitos principais
 
