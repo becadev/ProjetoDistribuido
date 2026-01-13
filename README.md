@@ -5,7 +5,8 @@ Este projeto implementa uma arquitetura distribuída contendo:
 - 🟦 **REST (Django)** → serviços, clientes, catálogo  
 - 🟧 **SOAP (Java JAX-WS)** → agendamentos  
 - 🟥 **API Gateway (FastAPI)** → unifica REST + SOAP + WS com HATEOAS  
-- 🟪 **Mensageria (RabbitMQ)** → comunicação assíncrona entre serviços  
+- 🟪 **Mensageria (RabbitMQ)** → comunicação assíncrona entre serviços
+- 🟫 **Socke TCP/UDP** → 
 
 # 📌 1. Conceitos principais
 
