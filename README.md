@@ -110,7 +110,8 @@ cd agendeja_rest
 
 python manage.py migrate
 
-python manage.py runserver 5001
+<!-- python manage.py runserver 5001 -->
+python manage.py runserver 0.0.0.0:8001  // para o funcionamento do chat
 
 #### Crie o super user para cadastrar serviços e clientes pelo admin
 
@@ -190,6 +191,7 @@ python consumer.py
 
 ---
 
+
 ## 🟦 2.5 Cliente Web (Frontend)
 
 ### Rode em outro terminal:
@@ -198,6 +200,25 @@ python consumer.py
 cd frontend
 python -m http.server 5500
 ```
+
+--- 
+
+## 🟧 2.6 Servidor  socket TCP/UDP (Python)
+
+TCP Server (porta 5000) - para autenticação e gerenciamento de salas
+UDP Server (porta 5001) - para notificações (simulado)
+
+### Terminal 1 - TCP Server :
+
+cd chat_tcp_udp
+python tcp_server.py
+
+### Terminal 2 - UDP Server :
+
+cd chat_tcp_udp
+python udp_server.py
+
+---
 
 ### Acessar no navegador:
 
