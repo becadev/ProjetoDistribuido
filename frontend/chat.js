@@ -13,6 +13,7 @@ let udpSocket = null;
 let messageHistory = {};
 let connectedRooms = [];
 let typingTimeout = null;
+let lastMessageCount = 0;  // Controlar se há novas mensagens
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,8 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Simular conexão UDP (em produção seria WebSocket)
     initUDPSimulation();
     
-    // Carregar salas
+    // Carregar salas uma única vez
     loadRooms();
+    
+    // Listener para storage (detecta mudanças de outras abas e notificações de mensagens)
+    window.addEventListener('storage', (event) => {
+        console.log('[CHAT] Storage event detectado:', event.key);
+        
+        // Se mudança em notificação de nova mensagem, carregar mensagens
+        if (event.key && event.key.startsWith('chat_new_message_')) {
+            const roomId = event.key.replace('chat_new_message_', '');
+            console.log(`[CHAT] Nova mensagem na sala ${roomId}`);
+            
+            // Apenas recarregar se estamos nessa sala
+            if (currentRoom && currentRoom.id === roomId) {
+                console.log('[CHAT] Recarregando histórico de mensagens...');
+                loadMessageHistoryFromServer();
+            }
+        }
+        
+        // Se mudança em notificação de nova sala, recarregar salas
+        if (event.key && event.key.startsWith('chat_notification_')) {
+            console.log('[CHAT] Notificação de sala detectada, recarregando salas...');
+            loadRooms();
+        }
+    });
 });
 
 // ===== TCP CONNECTION =====
@@ -56,7 +80,7 @@ function sendTCPLogin() {
     const loginData = {
         type: 'login',
         username: currentUser.username,
-        user_id: currentUser.id,
+        user_id: currentUser.usuario_id,
         role: currentUser.role,
         profile_id: currentUser.profile_id
     };
@@ -94,7 +118,7 @@ function loadClientRooms() {
     roomsContainer.innerHTML = '<div style="padding: 20px; text-align: center;">Carregando salas...</div>';
 
     // Buscar agendamentos do cliente
-    fetch(`${DJANGO_API}/meus-agendamentos/?user_id=${currentUser.id}`, {
+    fetch(`${DJANGO_API}/meus-agendamentos/?user_id=${currentUser.usuario_id}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -112,16 +136,18 @@ function loadClientRooms() {
         // Criar uma sala para cada profissional único nos agendamentos
         const profissionaisUnicos = new Map();
 
+        console.log('[CHAT] Agendamentos do cliente:', agendamentos);
+
         agendamentos.forEach(agendamento => {
             if (agendamento.profissional_usuario_id && agendamento.profissional_nome) {
                 if (!profissionaisUnicos.has(agendamento.profissional_usuario_id)) {
                     profissionaisUnicos.set(agendamento.profissional_usuario_id, {
-                        id: `cliente_${currentUser.id}_profissional_${agendamento.profissional_usuario_id}`,
+                        id: `cliente_${currentUser.usuario_id}_profissional_${agendamento.profissional_usuario_id}`,
                         name: `Chat com ${agendamento.profissional_nome}`,
                         description: `Conversar sobre seus agendamentos`,
                         profissional_id: agendamento.profissional_usuario_id,
                         profissional_nome: agendamento.profissional_nome,
-                        participants: 1
+                        participants: 2  // Cliente + Profissional
                     });
                 }
             }
@@ -149,41 +175,58 @@ function loadProfessionalRooms() {
     const roomsContainer = document.getElementById('roomsContainer');
     roomsContainer.innerHTML = '<div style="padding: 20px; text-align: center;">Carregando conversas...</div>';
 
-    // Para profissionais: buscar conversas ativas (salas que contenham mensagens)
-    const conversas = [];
-    const messageKeys = Object.keys(localStorage).filter(key => key.startsWith('chat_messages_'));
-
-    messageKeys.forEach(key => {
-        const roomId = key.replace('chat_messages_', '');
-        // Se a sala contém o ID do profissional, é uma conversa com cliente
-        if (roomId.includes(`_profissional_${currentUser.id}`)) {
-            const messages = JSON.parse(localStorage.getItem(key) || '[]');
-            if (messages.length > 0) {
-                const lastMessage = messages[messages.length - 1];
-                const clienteId = roomId.split('_')[1]; // cliente_{clienteId}_profissional_{profissionalId}
-
-                conversas.push({
-                    id: roomId,
-                    name: `Conversa com Cliente ${clienteId}`,
-                    description: `Última mensagem: ${lastMessage.text.substring(0, 50)}...`,
-                    participants: 2,
-                    lastMessage: lastMessage
-                });
-            }
+    // Buscar agendamentos do profissional
+    fetch(`${DJANGO_API}/meus-agendamentos/?profissional_id=${currentUser.usuario_id}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
         }
-    });
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro ao carregar agendamentos');
+        }
+        return response.json();
+    })
+    .then(agendamentos => {
+        const rooms = [];
 
-    // Se não há conversas ativas, mostrar sala vazia
-    if (conversas.length === 0) {
-        conversas.push({
-            id: 'profissional_geral',
-            name: 'Aguardando conversas',
-            description: 'Nenhuma conversa ativa com clientes',
-            participants: 1
+        // Criar uma sala para cada cliente único nos agendamentos
+        const clientesUnicos = new Map();
+
+        console.log('[CHAT] Agendamentos do profissional:', agendamentos);
+
+        agendamentos.forEach(agendamento => {
+            if (agendamento.cliente_usuario_id && agendamento.cliente_nome) {
+                if (!clientesUnicos.has(agendamento.cliente_usuario_id)) {
+                    clientesUnicos.set(agendamento.cliente_usuario_id, {
+                        id: `cliente_${agendamento.cliente_usuario_id}_profissional_${currentUser.usuario_id}`,
+                        name: `Chat com ${agendamento.cliente_nome}`,
+                        description: `Conversar sobre agendamentos`,
+                        cliente_id: agendamento.cliente_usuario_id,
+                        cliente_nome: agendamento.cliente_nome,
+                        participants: 2
+                    });
+                }
+            }
         });
-    }
 
-    displayRooms(conversas);
+        // Converter Map para array
+        rooms.push(...clientesUnicos.values());
+
+        displayRooms(rooms);
+    })
+    .catch(error => {
+        console.error('Erro ao carregar agendamentos:', error);
+        // Mostrar mensagem de nenhum agendamento
+        const emptyRooms = [{
+            id: 'vazio',
+            name: 'Nenhum agendamento',
+            description: 'Aguardando clientes com agendamentos marcados',
+            participants: 1
+        }];
+        displayRooms(emptyRooms);
+    });
 }
 
 function showDefaultRooms() {
@@ -210,13 +253,14 @@ function displayRooms(rooms) {
     }
 
     roomsContainer.innerHTML = '';
+    console.log('[CHAT] Exibindo', rooms.length, 'salas:', rooms);
 
     rooms.forEach(room => {
         const roomEl = document.createElement('div');
         roomEl.className = 'room-item';
         roomEl.innerHTML = `
             <div class="room-name">${room.name}</div>
-            <div class="room-description">${room.description}</div>
+            <div class="room-description">${room.description || ''}</div>
             <div class="room-participants">${room.participants || 1} participante(s)</div>
         `;
 
@@ -259,7 +303,7 @@ function sendTCPJoinRoom(room) {
         type: 'join_room',
         username: currentUser.username,
         room: room.id,
-        user_id: currentUser.id
+        user_id: currentUser.usuario_id
     };
     
     console.log('[TCP] Entrando na sala:', data);
@@ -275,7 +319,7 @@ function sendUDPRegister(room) {
         type: 'register',
         username: currentUser.username,
         room: room.id,
-        user_id: currentUser.id
+        user_id: currentUser.usuario_id
     };
     
     console.log('[UDP] Registrado na sala:', data);
@@ -302,7 +346,7 @@ function sendMessage() {
     const message = {
         type: 'message',
         username: currentUser.username,
-        user_id: currentUser.id,
+        user_id: currentUser.usuario_id,
         text: text,
         room: currentRoom.id,
         timestamp: new Date().toISOString()
@@ -335,7 +379,10 @@ function sendUDPMessage(message) {
 function sendTCPMessage(message) {
     console.log('[TCP] Armazenando mensagem:', message);
     
-    // Salvar histórico localmente
+    // Salvar no servidor via API
+    sendMessageToServer(message);
+    
+    // Salvar histórico localmente também como fallback
     if (!messageHistory[message.room]) {
         messageHistory[message.room] = [];
     }
@@ -345,6 +392,48 @@ function sendTCPMessage(message) {
         `chat_messages_${message.room}`,
         JSON.stringify(messageHistory[message.room])
     );
+    
+    // Notificar o outro lado que há mensagens nesta sala
+    const notification = {
+        room: message.room,
+        timestamp: message.timestamp,
+        sender_id: message.user_id,
+        sender_name: message.username
+    };
+    localStorage.setItem(`chat_notification_${message.room}`, JSON.stringify(notification));
+}
+
+function sendMessageToServer(message) {
+    fetch(`${DJANGO_API}/chat/messages/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            room: message.room,
+            username: message.username,
+            user_id: message.user_id,
+            text: message.text,
+            timestamp: message.timestamp
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao enviar mensagem');
+        console.log('[API] Mensagem enviada com sucesso');
+        
+        // Notificar outras abas que há nova mensagem
+        const notificationKey = `chat_new_message_${message.room}`;
+        const timestamp = new Date().getTime();
+        localStorage.setItem(notificationKey, timestamp);
+        
+        // Limpar notificação após 100ms para permitir múltiplas notificações
+        setTimeout(() => {
+            localStorage.removeItem(notificationKey);
+        }, 100);
+    })
+    .catch(error => {
+        console.error('[API ERROR] Erro ao enviar mensagem:', error);
+    });
 }
 
 function broadcastMessage(message) {
@@ -397,39 +486,86 @@ function loadMessageHistory() {
     const container = document.getElementById('messagesContainer');
     container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Carregando histórico...</div>';
     
-    // Solicitar ao servidor TCP
-    const data = {
-        type: 'get_history',
-        username: currentUser.username,
-        room: currentRoom.id,
-        user_id: currentUser.id
-    };
+    // Carregar do servidor
+    loadMessageHistoryFromServer();
+}
+
+function loadMessageHistoryFromServer() {
+    if (!currentRoom) return;
     
-    console.log('[TCP] Solicitando histórico:', data);
-    
-    // Simular carregamento de histórico
-    setTimeout(() => {
-        const savedMessages = JSON.parse(
-            localStorage.getItem(`chat_messages_${currentRoom.id}`) || '[]'
-        );
+    fetch(`${DJANGO_API}/chat/messages/?room=${currentRoom.id}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao carregar mensagens');
+        return response.json();
+    })
+    .then(messages => {
+        const container = document.getElementById('messagesContainer');
         
-        container.innerHTML = '';
-        
-        if (savedMessages.length === 0) {
+        if (!Array.isArray(messages) || messages.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>Sem mensagens</h3>
                     <p>Este é o início da conversa</p>
                 </div>
             `;
+            lastMessageCount = 0;
             return;
         }
         
-        savedMessages.forEach(msg => {
-            const isOwn = msg.username === currentUser.username;
+        // Só renderizar se quantidade de mensagens mudou
+        if (messages.length === lastMessageCount) {
+            console.log('[CHAT] Nenhuma mensagem nova');
+            return;
+        }
+        
+        console.log(`[CHAT] Atualizando mensagens: ${lastMessageCount} → ${messages.length}`);
+        lastMessageCount = messages.length;
+        
+        container.innerHTML = '';
+        messages.forEach(msg => {
+            const isOwn = msg.user_id === currentUser.usuario_id;
             displayMessage(msg, isOwn);
         });
-    }, 300);
+        
+        // Scroll para final
+        container.scrollTop = container.scrollHeight;
+    })
+    .catch(error => {
+        console.error('[API ERROR]', error);
+        // Fallback para localStorage
+        loadMessageHistoryLocal();
+    });
+}
+
+function loadMessageHistoryLocal() {
+    if (!currentRoom) return;
+    
+    const container = document.getElementById('messagesContainer');
+    const savedMessages = JSON.parse(
+        localStorage.getItem(`chat_messages_${currentRoom.id}`) || '[]'
+    );
+    
+    container.innerHTML = '';
+    
+    if (savedMessages.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>Sem mensagens</h3>
+                <p>Este é o início da conversa</p>
+            </div>
+        `;
+        return;
+    }
+    
+    savedMessages.forEach(msg => {
+        const isOwn = msg.user_id === currentUser.usuario_id;
+        displayMessage(msg, isOwn);
+    });
 }
 
 // ===== SALAS =====
