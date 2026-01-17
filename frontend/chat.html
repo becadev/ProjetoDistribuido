@@ -310,7 +310,7 @@
 
         .btn-logout {
             padding: 8px 16px;
-            background: #ff6b6b;
+            background: #ff9800;
             color: white;
             border: none;
             border-radius: 6px;
@@ -321,7 +321,7 @@
         }
 
         .btn-logout:hover {
-            background: #ff5252;
+            background: #f57c00;
         }
 
         .btn-history {
@@ -483,7 +483,7 @@
             <div class="chat-top-bar">
                 <h3 id="currentRoomName">Selecione uma sala</h3>
                 <div class="top-actions">
-                    <button class="btn-logout" onclick="logoutChat()">Sair</button>
+                    <button class="btn-logout" onclick="voltarAoDash()"> Voltar ao Dash</button>
                 </div>
             </div>
 
@@ -534,5 +534,29 @@
 
     <script src="app.js"></script>
     <script src="chat.js"></script>
+    <script>
+        // Função para voltar ao dashboard
+        function voltarAoDash() {
+            console.log('[CHAT] Voltando ao dashboard...');
+            
+            // Parar polling de mensagens se existir
+            if (typeof stopPollingMessages === 'function') {
+                stopPollingMessages();
+            }
+            
+            // Obter usuário do localStorage
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            
+            console.log('[CHAT] User role:', user ? user.role : 'não encontrado');
+            
+            // Redirecionar baseado na role do usuário
+            if (user && user.role === 'profissional') {
+                window.location.href = 'profissional_dashboard.html';
+            } else {
+                window.location.href = 'cliente_dashboard.html';
+            }
+        }
+    </script>
 </body>
 </html>

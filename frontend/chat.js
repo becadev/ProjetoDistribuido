@@ -271,6 +271,9 @@ function displayRooms(rooms) {
 }
 
 function selectRoom(room) {
+    // Parar polling da sala anterior
+    stopPollingMessages();
+    
     currentRoom = room;
     
     // Atualizar UI
@@ -282,8 +285,9 @@ function selectRoom(room) {
     // Atualizar cabeçalho
     document.getElementById('currentRoomName').textContent = room.name;
     
-    // Limpar mensagens
+    // Limpar mensagens e resetar histórico local para recarregar do servidor
     document.getElementById('messagesContainer').innerHTML = '';
+    messageHistory[currentRoom.id] = [];
     
     // Habilitar input
     document.getElementById('messageInput').disabled = false;
@@ -359,6 +363,12 @@ function sendMessage() {
         timestamp: new Date().toISOString()
     };
     
+    // Adicionar ao histórico local ANTES de exibir (para evitar duplicação no polling)
+    if (!messageHistory[message.room]) {
+        messageHistory[message.room] = [];
+    }
+    messageHistory[message.room].push(message);
+    
     // Exibir mensagem localmente
     displayMessage(message, true);
     
@@ -389,12 +399,7 @@ function sendTCPMessage(message) {
     // Salvar no servidor via API
     sendMessageToServer(message);
     
-    // Salvar histórico localmente também como fallback
-    if (!messageHistory[message.room]) {
-        messageHistory[message.room] = [];
-    }
-    messageHistory[message.room].push(message);
-    
+    // Salvar no localStorage como fallback
     localStorage.setItem(
         `chat_messages_${message.room}`,
         JSON.stringify(messageHistory[message.room])
@@ -506,7 +511,11 @@ function loadMessageHistory() {
     if (!currentRoom) return;
     
     const container = document.getElementById('messagesContainer');
-    container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Carregando histórico...</div>';
+    
+    // Só mostra "Carregando..." se não houver histórico
+    if (!messageHistory[currentRoom.id] || messageHistory[currentRoom.id].length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Carregando histórico...</div>';
+    }
     
     // Carregar do servidor
     loadMessageHistoryFromServer();
@@ -533,8 +542,15 @@ function loadMessageHistoryFromServer() {
             return;
         }
         
+        // Inicializar histórico da sala se não existir
+        if (!messageHistory[currentRoom.id]) {
+            messageHistory[currentRoom.id] = [];
+        }
+        
+        const historicoAtual = messageHistory[currentRoom.id];
+        
         if (messages.length === 0) {
-            if (!messageHistory[currentRoom.id] || messageHistory[currentRoom.id].length === 0) {
+            if (historicoAtual.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>Sem mensagens</h3>
@@ -542,57 +558,37 @@ function loadMessageHistoryFromServer() {
                     </div>
                 `;
             }
-            lastMessageCount = 0;
             return;
         }
         
-        // Se é a primeira vez que carrega mensagens
-        if (!messageHistory[currentRoom.id]) {
-            messageHistory[currentRoom.id] = [];
+        // Se é a primeira vez (histórico vazio), renderizar tudo
+        if (historicoAtual.length === 0) {
             container.innerHTML = '';
             messages.forEach(msg => {
+                historicoAtual.push(msg);
                 const isOwn = msg.user_id === currentUser.usuario_id;
                 displayMessage(msg, isOwn);
             });
-            lastMessageCount = messages.length;
             console.log(`[CHAT] Carregadas ${messages.length} mensagens iniciais`);
             return;
         }
         
-        // Se há novas mensagens desde a última verificação
-        if (messages.length > messageHistory[currentRoom.id].length) {
-            const ultimaMsg = messageHistory[currentRoom.id][messageHistory[currentRoom.id].length - 1];
-            const ultimoId = ultimaMsg ? ultimaMsg.id : null;
+        // Se há mais mensagens no servidor que no histórico local
+        if (messages.length > historicoAtual.length) {
+            // Pegar apenas as novas mensagens (do final)
+            const novasMensagens = messages.slice(historicoAtual.length);
             
-            // Encontrar e exibir apenas as mensagens novas
-            let novasMensagens = [];
-            let encontrouUltima = !ultimoId; // Se não tinha mensagens antes, todas são novas
-            
-            for (let msg of messages) {
-                if (encontrouUltima) {
-                    novasMensagens.push(msg);
-                } else if (ultimoId && msg.id === ultimoId) {
-                    encontrouUltima = true;
-                }
-            }
-            
-            // Adicionar as novas mensagens ao histórico e exibi-las
             novasMensagens.forEach(msg => {
-                messageHistory[currentRoom.id].push(msg);
+                historicoAtual.push(msg);
                 const isOwn = msg.user_id === currentUser.usuario_id;
                 displayMessage(msg, isOwn);
             });
             
-            lastMessageCount = messages.length;
             console.log(`[CHAT] Adicionadas ${novasMensagens.length} mensagens novas`);
         }
     })
     .catch(error => {
         console.error('[API ERROR]', error);
-        // Fallback para localStorage
-        if (!messageHistory[currentRoom.id]) {
-            loadMessageHistoryLocal();
-        }
     });
 }
 
@@ -726,6 +722,32 @@ function logoutChat() {
     }
 }
 
+function voltarAoDash() {
+    console.log('[CHAT] Voltando ao dashboard...');
+    console.log('[CHAT] currentUser:', currentUser);
+    
+    // Parar polling de mensagens
+    if (typeof stopPollingMessages === 'function') {
+        stopPollingMessages();
+    }
+    
+    // Sair de todas as salas
+    if (connectedRooms && connectedRooms.length > 0) {
+        connectedRooms.forEach(room => {
+            sendTCPLeaveRoom({ id: room });
+        });
+    }
+    
+    // Redirecionar baseado na role do usuário
+    if (currentUser && currentUser.role === 'profissional') {
+        console.log('[CHAT] Redirecionando para profissional_dashboard.html');
+        window.location.href = 'profissional_dashboard.html';
+    } else {
+        console.log('[CHAT] Redirecionando para cliente_dashboard.html');
+        window.location.href = 'cliente_dashboard.html';
+    }
+}
+
 // ===== LISTENER PARA MENSAGENS UDP (simuladas) =====
 window.addEventListener('udp-message', (e) => {
     const message = e.detail;
@@ -767,3 +789,12 @@ document.getElementById('messageInput')?.addEventListener('input', () => {
         console.log('[UDP] Digitação finalizada');
     }, 3000);
 });
+
+// ===== EXPOR FUNÇÕES GLOBALMENTE =====
+window.voltarAoDash = voltarAoDash;
+window.sendMessage = sendMessage;
+window.handleMessageKeyPress = handleMessageKeyPress;
+window.showCreateRoomModal = showCreateRoomModal;
+window.closeCreateRoomModal = closeCreateRoomModal;
+window.createRoom = createRoom;
+window.logoutChat = logoutChat;

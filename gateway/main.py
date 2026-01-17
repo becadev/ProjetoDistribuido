@@ -13,7 +13,7 @@ app = FastAPI(title="API Gateway - AgendeJá")
 # ---------------------------------------------------------------------
 # CONFIGURAÇÕES
 # ---------------------------------------------------------------------
-REST_URL = "http://localhost:5001"
+REST_URL = "http://localhost:8001"
 SOAP_WSDL = "http://localhost:8088/soap/agendamento?wsdl"
 
 soap_client = Client(SOAP_WSDL)

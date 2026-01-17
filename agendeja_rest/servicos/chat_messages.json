@@ -77,6 +77,18 @@
       "user_id": 4,
       "text": "oi",
       "timestamp": "2026-01-17T02:54:09.813Z"
+    },
+    {
+      "username": "manus1",
+      "user_id": 4,
+      "text": "iai",
+      "timestamp": "2026-01-17T03:00:34.048Z"
+    },
+    {
+      "username": "chat",
+      "user_id": 3,
+      "text": "s",
+      "timestamp": "2026-01-17T03:00:39.407Z"
     }
   ]
 }
