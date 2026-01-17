@@ -14,6 +14,7 @@ let messageHistory = {};
 let connectedRooms = [];
 let typingTimeout = null;
 let lastMessageCount = 0;  // Controlar se há novas mensagens
+let pollingInterval = null;  // Para polling de novas mensagens
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -296,6 +297,9 @@ function selectRoom(room) {
     
     // Carregar histórico
     loadMessageHistory();
+    
+    // Iniciar polling de novas mensagens
+    startPollingMessages();
 }
 
 function sendTCPJoinRoom(room) {
@@ -334,6 +338,9 @@ function sendTCPLeaveRoom(room) {
     
     console.log('[TCP] Saindo da sala:', data);
     connectedRooms = connectedRooms.filter(r => r !== room.id);
+    
+    // Parar polling quando sair da sala
+    stopPollingMessages();
 }
 
 // ===== MENSAGENS =====
@@ -458,16 +465,31 @@ function displayMessage(message, isOwn = false) {
         minute: '2-digit'
     });
     
-    msgEl.innerHTML = `
-        <div>
-            ${!isOwn ? `<div class="message-author">${message.username}</div>` : ''}
-            <div class="message-bubble">
-                ${escapeHtml(message.text)}
-            </div>
-            <div class="message-meta">${time}</div>
-        </div>
-    `;
+    // Criar wrapper para conteúdo (autor, bolha, horário)
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.display = 'flex';
+    contentWrapper.style.flexDirection = 'column';
+    contentWrapper.style.gap = '2px';
+    contentWrapper.style.alignItems = isOwn ? 'flex-end' : 'flex-start';
     
+    if (!isOwn) {
+        const author = document.createElement('div');
+        author.className = 'message-author';
+        author.textContent = message.username;
+        contentWrapper.appendChild(author);
+    }
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+    bubble.textContent = message.text;
+    contentWrapper.appendChild(bubble);
+    
+    const meta = document.createElement('div');
+    meta.className = 'message-meta';
+    meta.textContent = time;
+    contentWrapper.appendChild(meta);
+    
+    msgEl.appendChild(contentWrapper);
     container.appendChild(msgEl);
     container.scrollTop = container.scrollHeight;
 }
@@ -506,39 +528,71 @@ function loadMessageHistoryFromServer() {
     .then(messages => {
         const container = document.getElementById('messagesContainer');
         
-        if (!Array.isArray(messages) || messages.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <h3>Sem mensagens</h3>
-                    <p>Este é o início da conversa</p>
-                </div>
-            `;
+        if (!Array.isArray(messages)) {
+            console.error('[CHAT] Resposta não é array:', messages);
+            return;
+        }
+        
+        if (messages.length === 0) {
+            if (!messageHistory[currentRoom.id] || messageHistory[currentRoom.id].length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Sem mensagens</h3>
+                        <p>Este é o início da conversa</p>
+                    </div>
+                `;
+            }
             lastMessageCount = 0;
             return;
         }
         
-        // Só renderizar se quantidade de mensagens mudou
-        if (messages.length === lastMessageCount) {
-            console.log('[CHAT] Nenhuma mensagem nova');
+        // Se é a primeira vez que carrega mensagens
+        if (!messageHistory[currentRoom.id]) {
+            messageHistory[currentRoom.id] = [];
+            container.innerHTML = '';
+            messages.forEach(msg => {
+                const isOwn = msg.user_id === currentUser.usuario_id;
+                displayMessage(msg, isOwn);
+            });
+            lastMessageCount = messages.length;
+            console.log(`[CHAT] Carregadas ${messages.length} mensagens iniciais`);
             return;
         }
         
-        console.log(`[CHAT] Atualizando mensagens: ${lastMessageCount} → ${messages.length}`);
-        lastMessageCount = messages.length;
-        
-        container.innerHTML = '';
-        messages.forEach(msg => {
-            const isOwn = msg.user_id === currentUser.usuario_id;
-            displayMessage(msg, isOwn);
-        });
-        
-        // Scroll para final
-        container.scrollTop = container.scrollHeight;
+        // Se há novas mensagens desde a última verificação
+        if (messages.length > messageHistory[currentRoom.id].length) {
+            const ultimaMsg = messageHistory[currentRoom.id][messageHistory[currentRoom.id].length - 1];
+            const ultimoId = ultimaMsg ? ultimaMsg.id : null;
+            
+            // Encontrar e exibir apenas as mensagens novas
+            let novasMensagens = [];
+            let encontrouUltima = !ultimoId; // Se não tinha mensagens antes, todas são novas
+            
+            for (let msg of messages) {
+                if (encontrouUltima) {
+                    novasMensagens.push(msg);
+                } else if (ultimoId && msg.id === ultimoId) {
+                    encontrouUltima = true;
+                }
+            }
+            
+            // Adicionar as novas mensagens ao histórico e exibi-las
+            novasMensagens.forEach(msg => {
+                messageHistory[currentRoom.id].push(msg);
+                const isOwn = msg.user_id === currentUser.usuario_id;
+                displayMessage(msg, isOwn);
+            });
+            
+            lastMessageCount = messages.length;
+            console.log(`[CHAT] Adicionadas ${novasMensagens.length} mensagens novas`);
+        }
     })
     .catch(error => {
         console.error('[API ERROR]', error);
         // Fallback para localStorage
-        loadMessageHistoryLocal();
+        if (!messageHistory[currentRoom.id]) {
+            loadMessageHistoryLocal();
+        }
     });
 }
 
@@ -566,6 +620,34 @@ function loadMessageHistoryLocal() {
         const isOwn = msg.user_id === currentUser.usuario_id;
         displayMessage(msg, isOwn);
     });
+}
+
+// ===== POLLING DE MENSAGENS =====
+function startPollingMessages() {
+    // Parar polling anterior se existir
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+    
+    console.log('[CHAT] Iniciando polling de mensagens');
+    
+    // Verificar imediatamente
+    loadMessageHistoryFromServer();
+    
+    // Iniciar novo polling a cada 1 segundo
+    pollingInterval = setInterval(() => {
+        if (currentRoom) {
+            loadMessageHistoryFromServer();
+        }
+    }, 1000);
+}
+
+function stopPollingMessages() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        console.log('[CHAT] Polling de mensagens parado');
+    }
 }
 
 // ===== SALAS =====
