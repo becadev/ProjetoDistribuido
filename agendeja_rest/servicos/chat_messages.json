@@ -90,5 +90,19 @@
       "text": "s",
       "timestamp": "2026-01-17T03:00:39.407Z"
     }
+  ],
+  "cliente_3_profissional_5": [
+    {
+      "username": "chat",
+      "user_id": 3,
+      "text": "oi rebc",
+      "timestamp": "2026-01-17T03:26:53.492Z"
+    },
+    {
+      "username": "rebec",
+      "user_id": 5,
+      "text": "fala tu",
+      "timestamp": "2026-01-17T03:27:05.398Z"
+    }
   ]
 }
