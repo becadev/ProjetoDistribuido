@@ -82,6 +82,9 @@
             background: rgba(255,255,255,0.3);
             transform: scale(1.05);
         }
+        .header-right a.btn {
+            text-decoration: none !important;
+        }
         
         .section {
             margin-bottom: 48px;
@@ -235,6 +238,161 @@
                 max-width: 100%;
             }
         }
+
+        /* ===== GLOBAL NOTIFICATION BELL ===== */
+        .global-notification-bell {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 8888;
+        }
+
+        .notification-bell-btn {
+            position: relative;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .notification-bell-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+        }
+
+        .notification-bell-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke-width: 2;
+        }
+
+        .notification-counter {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            min-width: 20px;
+            height: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+            animation: pulse 0.6s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 2px 12px rgba(239, 68, 68, 0.8);
+                transform: scale(1.05);
+            }
+        }
+
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-left: 4px solid #fbbf24;
+            animation: slideInRight 0.4s ease;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast.warning { border-left-color: #f59e0b; }
+        .toast.info { border-left-color: #3b82f6; }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            color: #666;
+        }
+
+        .toast-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .toast-message {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            color: #999;
+            flex-shrink: 0;
+            transition: color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toast-close:hover { color: #333; }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .toast.removing { animation: slideOutRight 0.4s ease forwards; }
     </style>
 </head>
 <body>
@@ -248,6 +406,7 @@
             <h1>Dashboard Profissional</h1>
             <div class="header-right">
                 <span class="user-name" id="userName"></span>
+                <a href="chat.html" class="btn btn-primary" style="text-decoration: none; display: inline-block;">💬 Chat</a>
                 <button class="btn btn-danger" onclick="logout()">Sair</button>
             </div>
         </div>
@@ -299,7 +458,69 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="notifications.js"></script>
     <script>
+        // ===== WEBSOCKET PARS NOTIFICAÇÕES EM DASHBOARDS =====
+        // Conectar ao WebSocket para receber notificações em tempo real
+        (function initDashboardNotifications() {
+            const user = getUser();
+            if (!user) return;
+            
+            let dashboardWS = null;
+            
+            function connectDashboardWS() {
+                try {
+                    console.log('[DASHBOARD-WS] Conectando para notificações...');
+                    dashboardWS = new WebSocket('ws://localhost:8000/ws');
+                    
+                    dashboardWS.onopen = () => {
+                        console.log('[DASHBOARD-WS] Conectado ao WebSocket');
+                        
+                        // Enviar identificação
+                        dashboardWS.send(JSON.stringify({
+                            type: 'user_login',
+                            username: user.username,
+                            user_id: user.usuario_id,
+                            role: user.role
+                        }));
+                    };
+                    
+                    dashboardWS.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            console.log('[DASHBOARD-WS] Mensagem recebida:', message.type || message.evento);
+                            
+                            // Repassar para sistema de notificações global
+                            if (typeof window.handleNotificationMessage === 'function') {
+                                window.handleNotificationMessage(message);
+                            }
+                        } catch (e) {
+                            console.error('[DASHBOARD-WS] Erro ao processar:', e);
+                        }
+                    };
+                    
+                    dashboardWS.onclose = () => {
+                        console.log('[DASHBOARD-WS] Desconectado');
+                        // Reconectar em 5 segundos
+                        setTimeout(connectDashboardWS, 5000);
+                    };
+                    
+                    dashboardWS.onerror = (error) => {
+                        console.error('[DASHBOARD-WS] Erro:', error);
+                    };
+                } catch (e) {
+                    console.error('[DASHBOARD-WS] Falha ao conectar:', e);
+                }
+            }
+            
+            // Conectar quando página estiver pronta
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', connectDashboardWS);
+            } else {
+                setTimeout(connectDashboardWS, 500);
+            }
+        })();
+        
         // Função para exibir toast
         function showToast(message) {
     const container = document.getElementById("toast-container");

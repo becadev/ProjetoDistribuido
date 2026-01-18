@@ -133,7 +133,7 @@ public class AgendamentoServiceImpl implements AgendamentoService {
         try (Connection conn = Database.connect()) {
             PreparedStatement ps = conn.prepareStatement(
                 "SELECT a.id, a.cliente_id, a.servico_id, a.data, a.hora_inicio, a.hora_fim, a.status, " +
-                "u.nome as cliente_nome, s.nome as servico_nome " +
+                "u.nome as cliente_nome, s.nome as servico_nome, s.profissional_id " +
                 "FROM agendamento a " +
                 "LEFT JOIN servicos_cliente c ON a.cliente_id = c.id " +
                 "LEFT JOIN servicos_usuario u ON c.usuario_id = u.id " +
@@ -154,6 +154,7 @@ public class AgendamentoServiceImpl implements AgendamentoService {
                     .append("\"cliente_nome\":\"").append(rs.getString("cliente_nome") != null ? rs.getString("cliente_nome") : "").append("\",")
                     .append("\"servico_id\":").append(rs.getInt("servico_id")).append(",")
                     .append("\"servico_nome\":\"").append(rs.getString("servico_nome") != null ? rs.getString("servico_nome") : "").append("\",")
+                    .append("\"profissional_id\":").append(rs.getInt("profissional_id")).append(",")
                     .append("\"data\":\"").append(rs.getString("data")).append("\",")
                     .append("\"hora_inicio\":\"").append(rs.getString("hora_inicio")).append("\",")
                     .append("\"hora_fim\":\"").append(rs.getString("hora_fim")).append("\",")

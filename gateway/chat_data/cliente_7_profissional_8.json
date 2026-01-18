@@ -1,0 +1,218 @@
+[
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "olá",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:47:30.804Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "iuuuuuuuuuuuuu",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:47:33.841Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "pi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:47:36.552Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:48:54.742Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:49:26.171Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ooooooooola",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:49:29.642Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ah bom",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:53:20.156Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "teste",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:53:21.306Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:53:46.975Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "manda bala",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:53:51.799Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "fala tu",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:54:11.366Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "MDS TA FUNCIONADNO",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:54:21.652Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "MDS OMAGA",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T18:55:00.663Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "OI",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T19:00:18.075Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "AI",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T19:00:56.677Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "OI",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T19:48:11.036Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "DIZ",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T19:48:30.681Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oii",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T19:48:45.409Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:18:24.491Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:18:31.175Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:01.883Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:21.979Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ol´",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:27.063Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "BOA TARDE",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:47.650Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "boa",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:33:11.428Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "........",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:34:26.632Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:42:27.890Z"
+  }
+]

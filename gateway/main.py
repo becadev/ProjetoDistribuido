@@ -1,19 +1,34 @@
-from fastapi import FastAPI, WebSocket, Request
+from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 import asyncio
+import threading
 from starlette.concurrency import run_in_threadpool
 from zeep import Client
-import pika # biblioteca que implementa o protocolo AMQP para comunicação com RabbitMQ, serve como cliente para enviar mensagens para o broker.
+import pika
 import json
+from datetime import datetime
+from pathlib import Path
+
+from mq_consumer import start_mq_consumer
+from chat_persistence import load_room_messages, save_message
 
 app = FastAPI(title="API Gateway - AgendeJá")
 
-# ---------------------------------------------------------------------
-# CONFIGURAÇÕES
-# ---------------------------------------------------------------------
-REST_URL = "http://localhost:5001"
+# ===== INICIALIZA CONSUMER RABBITMQ NO STARTUP =====
+@app.on_event("startup")
+def startup_event():
+    loop = asyncio.get_event_loop()
+    thread = threading.Thread(
+        target=start_mq_consumer,
+        args=(loop, broadcast_message),
+        daemon=True
+    )
+    thread.start()
+
+# ===== CONFIGURAÇÕES =====
+REST_URL = "http://localhost:8001"
 SOAP_WSDL = "http://localhost:8088/soap/agendamento?wsdl"
 
 soap_client = Client(SOAP_WSDL)
@@ -27,34 +42,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------
-# Mensageria com RabbitMQ (o gateway só vai publicar e não vai esperar mensagens e nem gerenciar filas)
-# ---------------------------------------------------------------------
+# ===== MENSAGERIA COM RABBITMQ =====
 def enviar_mensagem_mq(evento, dados):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost')
-    ) # cria conexão com o RabbitMQ
-    channel = connection.channel() # cria um canal de comunicação
-
-    # garante que a fila existe
+    )
+    channel = connection.channel()
     channel.queue_declare(queue='agendamentos')
 
     payload = json.dumps({
         "evento": evento,
         "dados": dados
-    }) # cria o payload da mensagem em formato JSON
+    })
 
     channel.basic_publish(
         exchange='',
         routing_key='agendamentos',
         body=payload
-    ) # publica a mensagem na fila 'agendamentos'
+    )
 
     connection.close()
 
-# ---------------------------------------------------------------------
-# HATEOAS ROOT
-# ---------------------------------------------------------------------
+# ===== HATEOAS ROOT =====
 @app.get("/", tags=["Gateway"])
 def gateway_root():
     return {
@@ -68,12 +77,11 @@ def gateway_root():
             "cancelar": "/cancelar",
             "listarAgendamentos": "/listarAgendamentos",
             "websocket": "/ws",
+            "chat_messages": "/chat/messages?room=ROOM_ID",
         }
     }
 
-# ---------------------------------------------------------------------
-# ROTAS REST (para Django)
-# ---------------------------------------------------------------------
+# ===== ROTAS REST (DJANGO) =====
 @app.get("/servicos", tags=["Serviços"])
 def listar_servicos():
     resp = requests.get(f"{REST_URL}/servicos/")
@@ -112,9 +120,7 @@ async def login(request: Request):
     resp = requests.post(f"{REST_URL}/login/", json=data)
     return resp.json()
 
-# ---------------------------------------------------------------------
-# ROTAS SOAP (agendamentos)
-# ---------------------------------------------------------------------
+# ===== ROTAS SOAP (AGENDAMENTOS) =====
 @app.get("/disponibilidade", tags=["Agendamentos"])
 def disponibilidade(data: str, servico_id: int):
     resposta = soap_client.service.consultarDisponibilidade(data, servico_id)
@@ -122,27 +128,15 @@ def disponibilidade(data: str, servico_id: int):
 
 @app.post("/agendar", tags=["Agendamentos"])
 async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
-
-    # SOAP rodando em thread pois é bloqueante
-    resposta = await run_in_threadpool( #await run_in_threadpool(lambda: soap_client.service.agendarServico(...)) porque chamadas Zeep são bloqueantes (síncronas). Se rodássemos diretamente bloquearíamos o loop async.
+    resposta = await run_in_threadpool(
         lambda: soap_client.service.agendarServico(
             clienteId, servicoId, data, horaInicio
         )
     )
 
-    # versão utilizando apenas websocket
-    # após a resposta da api soap, ele dispara a notificação por meio do websocket
-    # asyncio.create_task(
-    #     broadcast_message(
-    #         f"Novo agendamento: {data} às {horaInicio} (Serviço {servicoId}, Cliente {clienteId})"
-    #     )
-    # )
-
-    #versão utilizando mensageria + websocket
-    # chama a função que envia a mensagem para o RabbitMQ com os dados do novo agendamento
     enviar_mensagem_mq(
-        "novo_agendamento", #evento
-        { #dados
+        "novo_agendamento",
+        {
             "clienteId": clienteId,
             "servicoId": servicoId,
             "data": data,
@@ -152,21 +146,12 @@ async def agendar(clienteId: int, servicoId: int, data: str, horaInicio: str):
 
     return {"mensagem": resposta}
 
-
 @app.delete("/cancelar", tags=["Agendamentos"])
 async def cancelar(agendamentoId: int):
     resposta = await run_in_threadpool(
         lambda: (soap_client.service.cancelarAgendamento(agendamentoId))
     )
-    
-    # versão utilizando apenas websocket
-    # asyncio.create_task(
-    #     broadcast_message(
-    #         f"O agendamento {agendamentoId} foi cancelado"
-    #     )
-    # )
 
-    # versão utilizando mensageria + websocket
     enviar_mensagem_mq(
         "agendamento_cancelado",
         {
@@ -176,37 +161,116 @@ async def cancelar(agendamentoId: int):
 
     return {"mensagem": resposta}
 
-
 @app.get("/listarAgendamentos", tags=["Agendamentos"])
 def listar_agendamentos():
     resposta = soap_client.service.listarAgendamentos()
-    import json
     agendamentos = json.loads(resposta)
     return {"agendamentos": agendamentos}
 
+# ===== ENDPOINTS DE CHAT E PERSISTÊNCIA =====
+@app.get("/chat/messages", tags=["Chat"])
+async def get_chat_messages(room: str):
+    """Retorna histórico de mensagens de uma sala"""
+    messages = load_room_messages(room)
+    return messages
 
-# ---------------------------------------------------------------------
-# SERVIÇO WEBSOCKET 
-# ---------------------------------------------------------------------
-connected_websockets = set() # conjunto de conexoes, o uso do set evita duplicatas
-connected_clients = []  # lista simples de conexões
+@app.post("/chat/messages", tags=["Chat"])
+async def save_chat_message(request: Request):
+    """Salva uma mensagem de chat"""
+    try:
+        data = await request.json()
+        room = data.get('room')
+        
+        if not room:
+            return JSONResponse({"error": "room obrigatória"}, status_code=400)
+        
+        message = {
+            'user_id': data.get('user_id'),
+            'username': data.get('username'),
+            'text': data.get('text'),
+            'room': room,
+            'timestamp': data.get('timestamp', datetime.now().isoformat())
+        }
+        
+        save_message(room, message)
+        
+        return {"status": "ok", "message": message}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ===== WEBSOCKET E BROADCAST =====
+class ConnectionManager:
+    """Gerencia conexões WebSocket e broadcast de mensagens"""
+    def __init__(self):
+        self.active_connections = []
+        self.notifications_enabled = {}  # {user_id: bool}
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        print(f"[WS] Conectado. Total: {len(self.active_connections)}")
+    
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            print(f"[WS] Desconectado. Total: {len(self.active_connections)}")
+    
+    async def broadcast_to_all(self, message: dict):
+        """Envia para TODOS os clientes WebSocket"""
+        disconnected = []
+        for ws in self.active_connections:
+            try:
+                await ws.send_json(message)
+            except Exception as e:
+                print(f"[WS] Erro ao enviar: {e}")
+                disconnected.append(ws)
+        
+        for ws in disconnected:
+            self.disconnect(ws)
+
+manager = ConnectionManager()
+connected_clients = []  # compatibilidade com mq_consumer
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    connected_clients.append(websocket)   # registra cliente
-
+    await manager.connect(websocket)
+    connected_clients.append(websocket)
+    
     try:
         while True:
-            msg = await websocket.receive_text() #  recebe mensagem do cliente
-            await broadcast_message(msg) # envia para todos os clientes
+            msg = await websocket.receive_text()
+            message = json.loads(msg)
+            
+            # Se for mensagem de chat, salvar e fazer broadcast
+            if message.get('type') == 'chat_message':
+                room = message.get('room')
+                if room:
+                    save_message(room, message)
+                    # Adicionar indicador de notificação
+                    message['new_notification'] = True
+                    await manager.broadcast_to_all(message)
+            else:
+                # Outros eventos, apenas fazer broadcast
+                await manager.broadcast_to_all(message)
+    
     except WebSocketDisconnect:
-        connected_clients.remove(websocket) # remove cliente desconectado
+        manager.disconnect(websocket)
+        if websocket in connected_clients:
+            connected_clients.remove(websocket)
 
-
-async def broadcast_message(msg: str):
-    for ws in connected_clients:
-        try:
-            await ws.send_text(msg)      # envia mensagem
-        except Exception:
-            connected_clients.remove(ws)  # limpa conexões mortas
+async def broadcast_message(msg):
+    """Função chamada pelo RabbitMQ consumer para enviar eventos para WebSocket"""
+    try:
+        if isinstance(msg, str):
+            message = json.loads(msg)
+        else:
+            message = msg
+        
+        print(f"[RabbitMQ→WS] Evento: {message.get('evento', '?')}")
+        # Adicionar flag de notificação para o chat
+        message['from_rabbitmq'] = True
+        message['new_notification'] = True
+        
+        await manager.broadcast_to_all(message)
+    except Exception as e:
+        print(f"[WS ERROR] Erro ao processar RabbitMQ: {e}")

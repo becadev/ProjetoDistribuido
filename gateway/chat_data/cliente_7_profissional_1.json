@@ -1,0 +1,18 @@
+[
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "oi",
+    "room": "cliente_7_profissional_1",
+    "timestamp": "2026-01-18T20:42:54.957Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "oi",
+    "room": "cliente_7_profissional_1",
+    "timestamp": "2026-01-18T20:43:11.323Z"
+  }
+]

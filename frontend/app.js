@@ -242,15 +242,22 @@ async function listarAgendamentos() {
     const container = 'agendamentos';
     const user = getUser();
     
+    console.log('[DEBUG] User:', user);
+    console.log('[DEBUG] User profile_id:', user ? user.profile_id : 'N/A');
+    
     try {
         const r = await fetch(`${API}/listarAgendamentos`);
         if (!r.ok) throw new Error('Falha ao listar');
         const json = await r.json();
         
+        console.log('[DEBUG] Resposta da API:', json);
+        
         const div = document.getElementById(container);
         div.innerHTML = '';
         
         let agendamentos = json.agendamentos || [];
+        
+        console.log('[DEBUG] Agendamentos antes do filtro:', agendamentos);
         
         // Garantir que agendamentos é um array
         if (!Array.isArray(agendamentos)) {
@@ -262,11 +269,18 @@ async function listarAgendamentos() {
         // Se for cliente, filtrar apenas os seus
         if (user && user.role === 'cliente') {
             agendamentos = agendamentos.filter(a => a.cliente_id == user.profile_id);
+            console.log('[DEBUG] Agendamentos após filtro cliente:', agendamentos);
         }
         
         if (user && user.role === 'profissional') {
             // Filtrar agendamentos dos serviços do profissional
-            agendamentos = agendamentos.filter(a => a.profissional_id == user.profile_id);
+            console.log('[DEBUG] Filtrando por profissional_id:', user.profile_id);
+            console.log('[DEBUG] Campos de agendamento:', agendamentos.length > 0 ? Object.keys(agendamentos[0]) : 'vazio');
+            agendamentos = agendamentos.filter(a => {
+                console.log('[DEBUG] Comparando a.profissional_id:', a.profissional_id, 'com user.profile_id:', user.profile_id);
+                return a.profissional_id == user.profile_id;
+            });
+            console.log('[DEBUG] Agendamentos após filtro profissional:', agendamentos);
         }
         
         if (agendamentos.length === 0) {
