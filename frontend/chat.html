@@ -114,6 +114,155 @@
             }
         }
 
+        /* ===== SINO DE NOTIFICAÇÕES ===== */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 24px;
+            margin-right: 15px;
+            transition: transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+
+        .notification-bell .bell-icon {
+            display: inline-block;
+        }
+
+        .notification-counter {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 0.6s infinite;
+            display: none;
+        }
+
+        .notification-counter.active {
+            display: flex;
+        }
+
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-left: 4px solid #fbbf24;
+            animation: slideInRight 0.4s ease;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            max-width: 400px;
+            min-width: 300px;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.info {
+            border-left-color: #3b82f6;
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .toast-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .toast-message {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            transition: color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: #333;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .toast.removing {
+            animation: slideOutRight 0.4s ease forwards;
+        }
+
         .room-name {
             font-weight: 600;
             color: #333;
@@ -522,6 +671,11 @@
             <div class="chat-top-bar">
                 <h3 id="currentRoomName">Selecione uma sala</h3>
                 <div class="top-actions">
+                    <!-- Sino de Notificações -->
+                    <div class="notification-bell" id="notificationBell" onclick="toggleNotificationPanel()">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-counter" id="notificationCounter">0</span>
+                    </div>
                     <button class="btn-logout" onclick="voltarAoDash()"> Voltar ao Dash</button>
                 </div>
             </div>
@@ -597,5 +751,8 @@
             }
         }
     </script>
+
+    <!-- Container de Notificações Toast -->
+    <div id="toastContainer" class="toast-container"></div>
 </body>
 </html>

@@ -13,6 +13,10 @@ let typingTimeout = null;
 let unreadMessages = {};  // {room_id: count}
 let pollingInterval = null;  // compatibilidade com funções antigas
 
+// ===== ESTADO DE NOTIFICAÇÕES =====
+let notificationsList = [];  // fila de notificações globais
+let totalNotifications = 0;  // contador total
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
     currentUser = getUser();
@@ -143,8 +147,25 @@ function showNotification(message) {
         badge.textContent = (unreadMessages[room] || 0) + 1;
     }
     
-    // Som de notificação (opcional)
+    // Adicionar ao contador global de notificações
+    addNotification({
+        type: 'message',
+        title: `Mensagem de ${message.username}`,
+        message: message.text.substring(0, 50) + (message.text.length > 50 ? '...' : ''),
+        room: room,
+        timestamp: message.timestamp
+    });
+    
+    // Som de notificação
     playNotificationSound();
+    
+    // Toast para nova mensagem
+    showToast(
+        `💬 ${message.username}`,
+        message.text.substring(0, 60) + (message.text.length > 60 ? '...' : ''),
+        'info',
+        4000
+    );
 }
 
 function setRoomNotification(roomId) {
@@ -183,14 +204,43 @@ function showSystemNotification(message) {
     const evento = message.evento;
     let title = 'Nova Notificação';
     let body = evento;
+    let toastType = 'info';
     
     if (evento === 'novo_agendamento') {
-        title = 'Novo Agendamento';
+        title = '📅 Novo Agendamento';
         body = `${message.dados.data} às ${message.dados.horaInicio}`;
+        toastType = 'success';
+        
+        // Se for profissional responsável, enviar notificação especial
+        if (currentUser.role === 'profissional') {
+            const isResponsible = (message.dados.profissional_id === currentUser.usuario_id) || 
+                                  (message.dados.profissionalId === currentUser.usuario_id);
+            if (isResponsible) {
+                title = '🎯 Cliente Agendou com Você!';
+                body = `${message.dados.cliente_nome || 'Cliente'} agendou para ${message.dados.data} às ${message.dados.horaInicio}`;
+                toastType = 'success';
+            }
+        }
     } else if (evento === 'agendamento_cancelado') {
-        title = 'Agendamento Cancelado';
+        title = '❌ Agendamento Cancelado';
         body = `ID: ${message.dados.agendamentoId}`;
+        toastType = 'warning';
     }
+    
+    // Mostrar toast (sempre visível)
+    showToast(title, body, toastType, 6000);
+    
+    // Adicionar ao contador de notificações
+    addNotification({
+        type: evento,
+        title: title,
+        message: body,
+        timestamp: new Date().toISOString(),
+        data: message.dados
+    });
+    
+    // Tocar som
+    playNotificationSound();
     
     // Notificação do navegador (se permissão concedida)
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -221,6 +271,97 @@ function playNotificationSound() {
     } catch (e) {
         // Se falhar, silenciosamente continuar
     }
+}
+
+// ===== SISTEMA DE TOAST (notificações visuais) =====
+/**
+ * Cria e exibe um toast (notificação visual no canto superior direito)
+ * tipos: 'success', 'error', 'info', 'warning'
+ */
+function showToast(title, message, type = 'info', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Escolher ícone baseado no tipo
+    let icon = '💬';
+    if (type === 'success') icon = '✅';
+    else if (type === 'error') icon = '❌';
+    else if (type === 'warning') icon = '⚠️';
+    else if (type === 'info') icon = 'ℹ️';
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+            <div class="toast-title">${escapeHtml(title)}</div>
+            <div class="toast-message">${escapeHtml(message)}</div>
+        </div>
+        <div class="toast-close" onclick="removeToast(this)">×</div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto-remove após duration
+    if (duration > 0) {
+        setTimeout(() => {
+            removeToast(toast);
+        }, duration);
+    }
+}
+
+function removeToast(toastEl) {
+    if (!toastEl) return;
+    
+    toastEl.classList.add('removing');
+    setTimeout(() => {
+        if (toastEl.parentNode) {
+            toastEl.parentNode.removeChild(toastEl);
+        }
+    }, 400);
+}
+
+/**
+ * Incrementa contador de notificações e atualiza sino
+ */
+function addNotification(notification) {
+    totalNotifications++;
+    notificationsList.push(notification);
+    updateNotificationBell();
+}
+
+/**
+ * Atualiza o sino com o contador total
+ */
+function updateNotificationBell() {
+    const counter = document.getElementById('notificationCounter');
+    if (!counter) return;
+    
+    if (totalNotifications > 0) {
+        counter.textContent = totalNotifications > 99 ? '99+' : totalNotifications;
+        counter.classList.add('active');
+    } else {
+        counter.classList.remove('active');
+    }
+}
+
+/**
+ * Limpa o contador de notificações quando o usuário vê o painel
+ */
+function clearNotifications() {
+    totalNotifications = 0;
+    notificationsList = [];
+    updateNotificationBell();
+    showToast('Notificações', 'Todas as notificações foram limpas', 'info', 2000);
+}
+
+/**
+ * Toggle do painel de notificações (futuro)
+ */
+function toggleNotificationPanel() {
+    console.log('[NOTIF] Abrindo painel de notificações');
+    clearNotifications();
+    // Aqui podia abrir um modal com histórico de notificações
 }
 
 // ===== TCP CONNECTION (mantido para compatibilidade) =====
@@ -908,3 +1049,5 @@ window.showCreateRoomModal = showCreateRoomModal;
 window.closeCreateRoomModal = closeCreateRoomModal;
 window.createNewRoom = createNewRoom;
 window.logoutChat = logoutChat;
+window.toggleNotificationPanel = toggleNotificationPanel;
+window.removeToast = removeToast;
