@@ -131,6 +131,10 @@ function handleWebSocketMessage(message) {
         console.log('[WS] Evento:', message.evento);
         showSystemNotification(message);
     }
+    
+    if (typeof window.handleNotificationMessage === 'function') {
+        window.handleNotificationMessage(message);
+    }
 }
 
 // ===== SINO DE NOTIFICAÇÃO =====

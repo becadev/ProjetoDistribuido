@@ -142,5 +142,77 @@
     "text": "oii",
     "room": "cliente_7_profissional_8",
     "timestamp": "2026-01-18T19:48:45.409Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:18:24.491Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:18:31.175Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:01.883Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:21.979Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ol´",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:27.063Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "BOA TARDE",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:32:47.650Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "thaaaysis",
+    "user_id": 7,
+    "text": "boa",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:33:11.428Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "........",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:34:26.632Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T20:42:27.890Z"
   }
 ]
