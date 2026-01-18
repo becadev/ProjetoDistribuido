@@ -1,6 +1,6 @@
 /**
  * Sistema centralizado de notificações
- * Funciona em qualquer página do aplicativo
+ * Funciona emqualquer pagina do aplicativo
  * Gerencia apenas UI (sino, toasts) - WebSocket gerenciado externamente
  */
 
@@ -8,20 +8,14 @@
 let globalNotificationCount = 0;
 let currentUserGlobal = null;
 
-// ===== SVG ICONS =====
+// ===== SVG ICONS (inline para evitar dependências externas) =====
 const SVG_ICONS = {
     bell: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
-    
     messageSquare: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`,
-    
     calendar: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
-    
     check: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
-    
     alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
-    
     info: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
-    
     x: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
 };
 
@@ -103,7 +97,7 @@ function handleNotificationMessage(message) {
     
     console.log('[NOTIF-HANDLER] Recebido:', message.type || message.evento, 'Página:', window.location.pathname);
     
-    // Eventos de agendamento (com ou sem from_rabbitmq)
+    // eventos de agendamento (com ou sem from_rabbitmq)
     // n depender exclusivamente de from_rabbitmq
     if (message.evento) {
         console.log('[NOTIF-HANDLER] Evento de agendamento detectado:', message.evento);
@@ -129,18 +123,19 @@ function handleSchedulingNotification(message) {
     let shouldNotify = false;
     
     if (evento === 'novo_agendamento') {
-        // Profissional recebe notificação quando cliente agenda
+        // profissional recebe notificação quando cliente agenda
         if (currentUserGlobal.role === 'profissional') {
             // Flexível: aceita diferentes nomes de campo
             const isResponsible = 
-                (message.dados.profissional_id === currentUserGlobal.usuario_id) ||
-                (message.dados.profissionalId === currentUserGlobal.usuario_id) ||
-                (message.dados.profissional_usuario_id === currentUserGlobal.usuario_id);
-            
-            if (isResponsible) {
+                (message?.dados?.profissional_id === currentUserGlobal.usuario_id) ||
+                (message?.dados?.profissionalId === currentUserGlobal.usuario_id) ||
+                (message?.dados?.profissional_usuario_id === currentUserGlobal.usuario_id);
+
+            // se nao vier identificaçao do profissional, notificamos todos os profissionais
+            if (isResponsible || message?.dados?.profissional_id === undefined) {
                 title = 'Novo Agendamento!';
-                const horario = message.dados.horaInicio || message.dados.hora || 'Horário não definido';
-                const data = message.dados.data || 'Data não definida';
+                const horario = message?.dados?.horaInicio || message?.dados?.hora || 'Horário não definido';
+                const data = message?.dados?.data || 'Data não definida';
                 description = `${data} às ${horario}`;
                 type = 'success';
                 icon = 'calendar';
@@ -150,8 +145,8 @@ function handleSchedulingNotification(message) {
         // Cliente pode receber confirmação (opcional)
         else if (currentUserGlobal.role === 'cliente') {
             const isOwn = 
-                message.dados.cliente_usuario_id === currentUserGlobal.usuario_id ||
-                message.dados.clienteId === currentUserGlobal.usuario_id;
+                message?.dados?.cliente_usuario_id === currentUserGlobal.usuario_id ||
+                message?.dados?.clienteId === currentUserGlobal.usuario_id;
             
             if (isOwn) {
                 title = 'Agendamento Confirmado';
@@ -227,11 +222,6 @@ function showNotificationToast(title, message, type = 'info', iconKey = 'info') 
     `;
     
     container.appendChild(toast);
-    
-    // Auto-remove após 5 segundos
-    setTimeout(() => {
-        removeNotificationToast(toast);
-    }, 5000);
 }
 
 function removeNotificationToast(toastEl) {
