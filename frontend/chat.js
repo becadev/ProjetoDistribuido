@@ -1,20 +1,17 @@
-// ===== CONFIGURAÇÕES TCP/UDP =====
-const TCP_HOST = 'localhost';
-const TCP_PORT = 5000;
-const UDP_HOST = 'localhost';
-const UDP_PORT = 5001;
+// ===== CONFIGURAÇÕES =====
 const DJANGO_API = 'http://localhost:8001';
+const GATEWAY_API = 'http://localhost:8000';
+const WS_URL = 'ws://localhost:8000/ws';
 
 // ===== ESTADO DO CHAT =====
 let currentUser = null;
 let currentRoom = null;
-let tcpSocket = null;
-let udpSocket = null;
+let wsSocket = null;  // WebSocket para tempo real
 let messageHistory = {};
 let connectedRooms = [];
 let typingTimeout = null;
-let lastMessageCount = 0;  // Controlar se há novas mensagens
-let pollingInterval = null;  // Para polling de novas mensagens
+let unreadMessages = {};  // {room_id: count}
+let pollingInterval = null;  // compatibilidade com funções antigas
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,77 +22,219 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Atualizar informações do usuário
     document.getElementById('userDisplayName').textContent = currentUser.username;
     
-    // Inicializar conexão TCP
-    initTCPConnection();
+    // PRIORIDADE: Conectar WebSocket para tempo real
+    initWebSocket();
     
-    // Simular conexão UDP (em produção seria WebSocket)
-    initUDPSimulation();
-    
-    // Carregar salas uma única vez
+    // Carregar salas
     loadRooms();
-    
-    // Listener para storage (detecta mudanças de outras abas e notificações de mensagens)
-    window.addEventListener('storage', (event) => {
-        console.log('[CHAT] Storage event detectado:', event.key);
-        
-        // Se mudança em notificação de nova mensagem, carregar mensagens
-        if (event.key && event.key.startsWith('chat_new_message_')) {
-            const roomId = event.key.replace('chat_new_message_', '');
-            console.log(`[CHAT] Nova mensagem na sala ${roomId}`);
-            
-            // Apenas recarregar se estamos nessa sala
-            if (currentRoom && currentRoom.id === roomId) {
-                console.log('[CHAT] Recarregando histórico de mensagens...');
-                loadMessageHistoryFromServer();
-            }
-        }
-        
-        // Se mudança em notificação de nova sala, recarregar salas
-        if (event.key && event.key.startsWith('chat_notification_')) {
-            console.log('[CHAT] Notificação de sala detectada, recarregando salas...');
-            loadRooms();
-        }
-    });
 });
 
-// ===== TCP CONNECTION =====
-function initTCPConnection() {
+// ===== WEBSOCKET E NOTIFICAÇÕES EM TEMPO REAL =====
+function initWebSocket() {
     try {
-        // Simular conexão TCP (na prática, seria via WebSocket ou HTTP polling)
-        console.log('[TCP] Tentando conectar ao servidor TCP...');
+        console.log('[WS] Conectando a', WS_URL);
+        wsSocket = new WebSocket(WS_URL);
         
-        // Enviar login TCP
-        sendTCPLogin();
+        wsSocket.onopen = () => {
+            console.log('[WS] Conectado!');
+            updateConnectionStatus('Online', true);
+            
+            // Enviar identificação do usuário
+            wsSocket.send(JSON.stringify({
+                type: 'user_login',
+                username: currentUser.username,
+                user_id: currentUser.usuario_id,
+                role: currentUser.role
+            }));
+        };
         
-        updateConnectionStatus('Conectado', true);
-    } catch (error) {
-        console.error('[TCP ERROR]', error);
-        updateConnectionStatus('Desconectado', false);
+        wsSocket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            } catch (e) {
+                console.error('[WS] Erro ao processar:', e);
+            }
+        };
+        
+        wsSocket.onerror = (error) => {
+            console.error('[WS] Erro:', error);
+            updateConnectionStatus('Erro', false);
+        };
+        
+        wsSocket.onclose = () => {
+            console.log('[WS] Desconectado');
+            updateConnectionStatus('Offline', false);
+            
+            // Reconectar em 3 segundos
+            setTimeout(initWebSocket, 3000);
+        };
+    } catch (e) {
+        console.error('[WS] Falha ao conectar:', e);
     }
 }
 
-function sendTCPLogin() {
-    const loginData = {
-        type: 'login',
-        username: currentUser.username,
-        user_id: currentUser.usuario_id,
-        role: currentUser.role,
-        profile_id: currentUser.profile_id
-    };
-    
-    // Simular envio TCP (em produção seria via WebSocket)
-    console.log('[TCP] Enviando login:', loginData);
-    localStorage.setItem('tcp_logged_in', JSON.stringify(loginData));
+function messageAlreadyStored(roomId, message) {
+    const history = messageHistory[roomId] || [];
+    return history.some(m =>
+        m.timestamp === message.timestamp &&
+        m.user_id === message.user_id &&
+        m.text === message.text
+    );
 }
 
-// ===== UDP SIMULATION =====
+function handleWebSocketMessage(message) {
+    const type = message.type;
+    
+    // Chat em tempo real
+    if (type === 'chat_message') {
+        const isOwn = message.user_id === currentUser.usuario_id;
+        const roomId = message.room;
+
+        const alreadyStored = messageAlreadyStored(roomId, message);
+
+        if (!messageHistory[roomId]) {
+            messageHistory[roomId] = [];
+        }
+
+        // Evita duplicar mensagens já exibidas
+        if (!alreadyStored) {
+            messageHistory[roomId].push(message);
+        }
+        
+        // Se é uma mensagem nova (não do usuário atual)
+        if (!isOwn && message.new_notification) {
+            showNotification(message);
+        }
+        
+        // Se está na sala, exibir a mensagem
+        if (currentRoom && currentRoom.id === message.room) {
+            // Apenas exibe se ainda não exibiu
+            if (!alreadyStored) {
+                displayMessage(message, isOwn);
+            }
+            clearRoomNotification(message.room);
+        } else if (!isOwn) {
+            // Se não está na sala, marcar como não lida
+            setRoomNotification(message.room);
+        }
+    }
+    
+    // Eventos de agendamento do RabbitMQ
+    if (message.from_rabbitmq) {
+        console.log('[WS] Evento:', message.evento);
+        showSystemNotification(message);
+    }
+}
+
+// ===== SINO DE NOTIFICAÇÃO =====
+function showNotification(message) {
+    const room = message.room;
+    
+    // Marcar sala como tendo notificação
+    setRoomNotification(room);
+    
+    // Mostrar sino visual
+    const badge = document.querySelector(`[data-room-id="${room}"] .notification-badge`);
+    if (badge) {
+        badge.style.display = 'block';
+        badge.textContent = (unreadMessages[room] || 0) + 1;
+    }
+    
+    // Som de notificação (opcional)
+    playNotificationSound();
+}
+
+function setRoomNotification(roomId) {
+    unreadMessages[roomId] = (unreadMessages[roomId] || 0) + 1;
+    
+    const roomEl = document.querySelector(`[data-room-id="${roomId}"]`);
+    if (roomEl) {
+        roomEl.classList.add('has-notification');
+        
+        let badge = roomEl.querySelector('.notification-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            roomEl.appendChild(badge);
+        }
+        badge.textContent = unreadMessages[roomId];
+        badge.style.display = 'block';
+    }
+}
+
+function clearRoomNotification(roomId) {
+    unreadMessages[roomId] = 0;
+    
+    const roomEl = document.querySelector(`[data-room-id="${roomId}"]`);
+    if (roomEl) {
+        roomEl.classList.remove('has-notification');
+        const badge = roomEl.querySelector('.notification-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function showSystemNotification(message) {
+    // Notificação de evento do sistema (agendamento, cancelamento, etc)
+    const evento = message.evento;
+    let title = 'Nova Notificação';
+    let body = evento;
+    
+    if (evento === 'novo_agendamento') {
+        title = 'Novo Agendamento';
+        body = `${message.dados.data} às ${message.dados.horaInicio}`;
+    } else if (evento === 'agendamento_cancelado') {
+        title = 'Agendamento Cancelado';
+        body = `ID: ${message.dados.agendamentoId}`;
+    }
+    
+    // Notificação do navegador (se permissão concedida)
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body });
+    }
+    
+    console.log(`[NOTIF] ${title}: ${body}`);
+}
+
+function playNotificationSound() {
+    // Som simples (usando Web Audio API ou HTML5 Audio)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+        // Se falhar, silenciosamente continuar
+    }
+}
+
+// ===== TCP CONNECTION (mantido para compatibilidade) =====
+function initTCPConnection() {
+    console.log('[TCP] (mantido para compatibilidade)');
+}
+
+function sendTCPLogin() {
+    console.log('[TCP] (mantido para compatibilidade)');
+}
+
+// ===== UDP SIMULATION (mantido para compatibilidade) =====
 function initUDPSimulation() {
-    console.log('[UDP] Inicializando comunicação UDP simulada...');
-    // Em produção, seria uma conexão WebSocket para simular UDP
-    updateConnectionStatus('Conectado', true);
+    console.log('[UDP] (mantido para compatibilidade)');
 }
 
 // ===== SALAS =====
@@ -259,33 +398,37 @@ function displayRooms(rooms) {
     rooms.forEach(room => {
         const roomEl = document.createElement('div');
         roomEl.className = 'room-item';
+        roomEl.setAttribute('data-room-id', room.id);
         roomEl.innerHTML = `
             <div class="room-name">${room.name}</div>
             <div class="room-description">${room.description || ''}</div>
             <div class="room-participants">${room.participants || 1} participante(s)</div>
         `;
 
-        roomEl.addEventListener('click', () => selectRoom(room));
+        roomEl.addEventListener('click', (event) => selectRoom(room, event));
         roomsContainer.appendChild(roomEl);
     });
 }
 
-function selectRoom(room) {
-    // Parar polling da sala anterior
-    stopPollingMessages();
-    
+function selectRoom(room, event) {
     currentRoom = room;
+    
+    // Limpar notificação desta sala
+    clearRoomNotification(room.id);
     
     // Atualizar UI
     document.querySelectorAll('.room-item').forEach(el => {
         el.classList.remove('active');
     });
-    event.target.closest('.room-item').classList.add('active');
+    const target = (event && (event.currentTarget || event.target)) || document.querySelector(`[data-room-id="${room.id}"]`);
+    if (target) {
+        target.classList.add('active');
+    }
     
     // Atualizar cabeçalho
     document.getElementById('currentRoomName').textContent = room.name;
     
-    // Limpar mensagens e resetar histórico local para recarregar do servidor
+    // Limpar container
     document.getElementById('messagesContainer').innerHTML = '';
     messageHistory[currentRoom.id] = [];
     
@@ -293,17 +436,8 @@ function selectRoom(room) {
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendBtn').disabled = false;
     
-    // Enviar request TCP para entrar na sala
-    sendTCPJoinRoom(room);
-    
-    // Registrar no UDP
-    sendUDPRegister(room);
-    
-    // Carregar histórico
+    // Carregar histórico do servidor
     loadMessageHistory();
-    
-    // Iniciar polling de novas mensagens
-    startPollingMessages();
 }
 
 function sendTCPJoinRoom(room) {
@@ -355,7 +489,7 @@ function sendMessage() {
     if (!text || !currentRoom) return;
     
     const message = {
-        type: 'message',
+        type: 'chat_message',
         username: currentUser.username,
         user_id: currentUser.usuario_id,
         text: text,
@@ -363,20 +497,19 @@ function sendMessage() {
         timestamp: new Date().toISOString()
     };
     
-    // Adicionar ao histórico local ANTES de exibir (para evitar duplicação no polling)
+    // Adicionar ao histórico local e exibir imediatamente
     if (!messageHistory[message.room]) {
         messageHistory[message.room] = [];
     }
     messageHistory[message.room].push(message);
-    
-    // Exibir mensagem localmente
     displayMessage(message, true);
-    
-    // Enviar via UDP (rápido)
-    sendUDPMessage(message);
-    
-    // Enviar via TCP (armazenar)
-    sendTCPMessage(message);
+
+    // Priorizar envio via WebSocket; fallback para API HTTP
+    if (wsSocket && wsSocket.readyState === WebSocket.OPEN) {
+        wsSocket.send(JSON.stringify(message));
+    } else {
+        sendMessageToServer(message);
+    }
     
     // Limpar input
     input.value = '';
@@ -416,7 +549,7 @@ function sendTCPMessage(message) {
 }
 
 function sendMessageToServer(message) {
-    fetch(`${DJANGO_API}/chat/messages/`, {
+    fetch(`${GATEWAY_API}/chat/messages`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -524,7 +657,7 @@ function loadMessageHistory() {
 function loadMessageHistoryFromServer() {
     if (!currentRoom) return;
     
-    fetch(`${DJANGO_API}/chat/messages/?room=${currentRoom.id}`, {
+    fetch(`${GATEWAY_API}/chat/messages?room=${currentRoom.id}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -542,50 +675,27 @@ function loadMessageHistoryFromServer() {
             return;
         }
         
-        // Inicializar histórico da sala se não existir
-        if (!messageHistory[currentRoom.id]) {
-            messageHistory[currentRoom.id] = [];
-        }
-        
-        const historicoAtual = messageHistory[currentRoom.id];
-        
+        // Renderiza sempre a partir do servidor para manter consistência
+        messageHistory[currentRoom.id] = [];
+        container.innerHTML = '';
+
         if (messages.length === 0) {
-            if (historicoAtual.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <h3>Sem mensagens</h3>
-                        <p>Este é o início da conversa</p>
-                    </div>
-                `;
-            }
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>Sem mensagens</h3>
+                    <p>Este é o início da conversa</p>
+                </div>
+            `;
             return;
         }
-        
-        // Se é a primeira vez (histórico vazio), renderizar tudo
-        if (historicoAtual.length === 0) {
-            container.innerHTML = '';
-            messages.forEach(msg => {
-                historicoAtual.push(msg);
-                const isOwn = msg.user_id === currentUser.usuario_id;
-                displayMessage(msg, isOwn);
-            });
-            console.log(`[CHAT] Carregadas ${messages.length} mensagens iniciais`);
-            return;
-        }
-        
-        // Se há mais mensagens no servidor que no histórico local
-        if (messages.length > historicoAtual.length) {
-            // Pegar apenas as novas mensagens (do final)
-            const novasMensagens = messages.slice(historicoAtual.length);
-            
-            novasMensagens.forEach(msg => {
-                historicoAtual.push(msg);
-                const isOwn = msg.user_id === currentUser.usuario_id;
-                displayMessage(msg, isOwn);
-            });
-            
-            console.log(`[CHAT] Adicionadas ${novasMensagens.length} mensagens novas`);
-        }
+
+        messages.forEach(msg => {
+            messageHistory[currentRoom.id].push(msg);
+            const isOwn = msg.user_id === currentUser.usuario_id;
+            displayMessage(msg, isOwn);
+        });
+
+        console.log(`[CHAT] Carregadas ${messages.length} mensagens do servidor`);
     })
     .catch(error => {
         console.error('[API ERROR]', error);
@@ -796,5 +906,5 @@ window.sendMessage = sendMessage;
 window.handleMessageKeyPress = handleMessageKeyPress;
 window.showCreateRoomModal = showCreateRoomModal;
 window.closeCreateRoomModal = closeCreateRoomModal;
-window.createRoom = createRoom;
+window.createNewRoom = createNewRoom;
 window.logoutChat = logoutChat;
