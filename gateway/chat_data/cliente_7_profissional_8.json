@@ -214,5 +214,61 @@
     "text": "oi",
     "room": "cliente_7_profissional_8",
     "timestamp": "2026-01-18T20:42:27.890Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:44:19.508Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "responde logo",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:44:31.383Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "olha aqui",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:44:34.398Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "rapido",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:44:38.671Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "responde",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:45:19.005Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oii",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:45:21.390Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "aqui",
+    "room": "cliente_7_profissional_8",
+    "timestamp": "2026-01-18T22:45:25.239Z"
   }
 ]

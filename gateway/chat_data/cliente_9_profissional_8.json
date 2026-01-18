@@ -1,0 +1,74 @@
+[
+  {
+    "type": "chat_message",
+    "username": "jordana",
+    "user_id": 9,
+    "text": "oi",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:40:33.252Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "jordana",
+    "user_id": 9,
+    "text": "pi",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:43:58.351Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "jordana",
+    "user_id": 9,
+    "text": "oi",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:44:07.036Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "oi",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:05.810Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ok",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:10.746Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "okokoko",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:19.624Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ok",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:20.418Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ok",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:21.312Z"
+  },
+  {
+    "type": "chat_message",
+    "username": "teste chat",
+    "user_id": 8,
+    "text": "ok",
+    "room": "cliente_9_profissional_8",
+    "timestamp": "2026-01-18T22:51:22.894Z"
+  }
+]
