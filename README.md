@@ -6,7 +6,7 @@ Este projeto implementa uma arquitetura distribuída contendo:
 - 🟧 **SOAP (Java JAX-WS)** → agendamentos  
 - 🟥 **API Gateway (FastAPI)** → unifica REST + SOAP + WS com HATEOAS  
 - 🟪 **Mensageria (RabbitMQ)** → comunicação assíncrona entre serviços
-- 🟫 **Socket TCP/UDP** → 
+- 🟫 **Socket TCP/UDP** → chat em tempo real entre clientes e profissionais 
 
 # 📌 1. Conceitos principais
 
@@ -45,6 +45,19 @@ Utilizado aqui para:
 - Garantia de entrega de mensagens mesmo se o consumidor estiver offline
 - Integração entre API Gateway (produtor) e notificações WebSocket (consumidor)  
 
+### ✔ Socket TCP/UDP (Chat)
+Comunicação via sockets para chat em tempo real entre clientes e profissionais.
+
+**TCP (Transmission Control Protocol):**
+- Protocolo orientado à conexão com garantia de entrega
+- Utilizado para: autenticação, gerenciamento de salas, histórico de mensagens
+- Porta padrão: 5000
+
+**UDP (User Datagram Protocol):**
+- Protocolo sem conexão, mais rápido mas sem garantia de entrega
+- Utilizado para: broadcast de mensagens em tempo real, notificações de digitação
+- Porta padrão: 5001  
+
 
                      ┌──────────────────┐
                      │  Cliente Web     │
@@ -77,6 +90,36 @@ Utilizado aqui para:
                               │
                               ▼ Notificações
                         [WebSocket Push]        
+
+
+## 🟫 Arquitetura do Chat TCP/UDP
+
+
+    ┌─────────────────┐         ┌─────────────────┐
+    │  Cliente Web    │         │  Cliente Web    │
+    │  (chat.html)    │         │  (chat.html)    │
+    └────────┬────────┘         └────────┬────────┘
+             │                           │
+             │ HTTP (REST)               │ HTTP (REST)
+             │                           │
+             ▼                           ▼
+    ┌──────────────────────────────────────────────┐
+    │              API Gateway (FastAPI)           │
+    │         WebSocket + Persistência JSON        │
+    └──────────────────────────────────────────────┘
+             │                           │
+     TCP (5000)                   UDP (5001)
+     Confiável                    Rápido
+             │                           │
+             ▼                           ▼
+    ┌─────────────────┐         ┌─────────────────┐
+    │   TCP Server    │◄───────►│   UDP Server    │
+    │   (Python)      │         │   (Python)      │
+    │                 │         │                 │
+    │ • Autenticação  │         │ • Broadcast     │
+    │ • Salas         │         │ • Notificações  │
+    │ • Histórico     │         │ • Baixa latência│
+    └─────────────────┘         └─────────────────┘        
 
 
 # 📌 2. Como rodar o projeto
@@ -206,18 +249,77 @@ python -m http.server 5500
 
 ## 🟧 2.6 Servidor  socket TCP/UDP (Python)
 
-TCP Server (porta 5000) - para autenticação e gerenciamento de salas
-UDP Server (porta 5001) - para notificações (simulado)
+Sistema de chat em tempo real utilizando protocolos TCP e UDP para comunicação entre clientes e profissionais.
 
-### Terminal 1 - TCP Server :
+### Componentes:
 
+| Servidor | Porta | Protocolo | Responsabilidade |
+|----------|-------|-----------|------------------|
+| TCP Server | 5000 | TCP | Autenticação, gerenciamento de salas, histórico |
+| UDP Server | 5001 | UDP | Broadcast de mensagens, notificações de digitação |
+
+### Terminal 1 - TCP Server:
+
+```bash
 cd chat_tcp_udp
 python tcp_server.py
+```
 
-### Terminal 2 - UDP Server :
+### Terminal 2 - UDP Server:
 
+```bash
 cd chat_tcp_udp
 python udp_server.py
+```
+
+### Funcionalidades do TCP Server:
+- **Autenticação**: Validação de usuários com username, user_id e role
+- **Gerenciamento de Salas**: Criar, entrar e sair de salas de chat
+- **Histórico de Mensagens**: Armazenamento e recuperação de mensagens anteriores
+- **Lista de Usuários**: Consultar usuários conectados em uma sala
+
+### Funcionalidades do UDP Server:
+- **Broadcast de Mensagens**: Envio rápido para todos os usuários de uma sala
+- **Notificações de Digitação**: Indicador em tempo real de quem está digitando
+- **Baixa Latência**: Ideal para mensagens que precisam de velocidade
+
+### Formato das Mensagens TCP:
+
+```json
+{
+  "type": "login",
+  "username": "joao.silva",
+  "user_id": 42,
+  "role": "cliente"
+}
+```
+
+```json
+{
+  "type": "join_room",
+  "room": "cliente_42_profissional_1"
+}
+```
+
+### Formato das Mensagens UDP:
+
+```json
+{
+  "type": "message",
+  "username": "joao.silva",
+  "user_id": 42,
+  "text": "Olá, gostaria de agendar um serviço",
+  "room": "cliente_42_profissional_1"
+}
+```
+
+```json
+{
+  "type": "typing",
+  "username": "joao.silva",
+  "room": "cliente_42_profissional_1"
+}
+```
 
 ---
 
@@ -231,6 +333,7 @@ http://localhost:5500/index.html
 - `register.html` - Cadastro de Cliente ou Profissional
 - `cliente_dashboard.html` - Dashboard do Cliente
 - `profissional_dashboard.html` - Dashboard do Profissional
+- `chat.html` - Chat em tempo real entre clientes e profissionais
 
 ---
 
@@ -250,6 +353,9 @@ http://localhost:5500/index.html
 | SOAP      | DELETE | `/cancelar` | Cancelar agendamento |
 | SOAP      | GET  | `/listarAgendamentos` | Listar agendamento |
 | WebSocket | WS   | `/ws` | Conexão para notificações em tempo real |
+| Chat | GET  | `/chat/rooms/{user_id}` | Lista salas de chat do usuário |
+| Chat | GET  | `/chat/messages/{room_id}` | Histórico de mensagens da sala |
+| Chat | POST | `/chat/send` | Envia mensagem na sala |
 
 ---
 
@@ -375,3 +481,6 @@ O WebSocket está integrado ao API Gateway e permite:
 - ✅ Autenticação e autorização com roles (Cliente/Profissional)
 - ✅ Banco de dados compartilhado entre REST e SOAP
 - ✅ Arquitetura orientada a eventos (Event-Driven Architecture)
+- ✅ Chat em tempo real com TCP/UDP
+
+---
